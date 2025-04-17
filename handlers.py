@@ -1,3 +1,5 @@
+import os
+import json
 import re
 from base.update import Update
 from base.utils import get_mx_time
@@ -151,8 +153,9 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
     numero_primero = re.findall("^\d+(\.\d+)?$", info_split[0])
     numero_final = re.findall("^\d+(\.\d+)?$", info_split[-1])
     lwr_txt = update.text.lower()
-    shortcuts = {"mb": 6, "m": 5}
-    short_desc = {"t": "Tienda", "tc": "Tacos"}
+    all_shortcuts = json.loads(os.getenv("EXPENSES_SHORTCUTS", "{}"))
+    short_desc = {k: v for k, v in all_shortcuts.items() if isinstance(v, str)}
+    shortcuts = {k: v for k, v in all_shortcuts.items() if isinstance(v, int)}
     nar = sh.get_next_available_row()
     formatted_msg = (
         lambda desc, cost: f"""A{nar} | B{nar} | C{nar}\n{desc} | ${cost}.00 | {date}"""

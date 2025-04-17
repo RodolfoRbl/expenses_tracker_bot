@@ -39,6 +39,7 @@ TOKEN_GOOGLE=your_base64_encoded_google_credentials
 MY_CHAT_ID=your_telegram_chat_id
 FILE_NAME=your_google_sheets_filename
 SHEET_NAME=your_sheet_name
+EXPENSES_SHORTCUTS=your_sheet_nameyour_dictionary_of_expenses_shortcuts
 ```
 
 4. Configure Google Sheets:
