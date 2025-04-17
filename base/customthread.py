@@ -31,9 +31,3 @@ def something_else():
     for i in range(4):
         print(f"doing something else {i}")
 
-
-# t1 = CustomThread(wait,5,'rodolfo')
-# t1.start()
-# something_else()
-# print(t1.join_and_result())
-# print(t1.is_alive())

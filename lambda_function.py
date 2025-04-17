@@ -5,7 +5,7 @@ from base.update import Update
 from base.bot import Bot
 from base.google_spreadsheets import Spreadsheet
 
-from config import TOKEN_BOT, HTML, MY_CHAT_ID, TOKEN_GOOGLE
+from config import TOKEN_BOT, HTML, MY_CHAT_ID, TOKEN_GOOGLE, FILE_NAME, SHEET_NAME
 import handlers as h
 
 
@@ -15,7 +15,7 @@ sh: Spreadsheet = None
 
 def conectar():
     global sh
-    sh = Spreadsheet("Rodolfo Robles", "GASTOS", TOKEN_GOOGLE)
+    sh = Spreadsheet(FILE_NAME, SHEET_NAME, TOKEN_GOOGLE)
 
 
 t_conectar = threading.Thread(target=conectar)
@@ -75,7 +75,7 @@ def lambda_handler(event, context):
         event_string = json.dumps(event, indent=4)
         bot.sendMessage(
             update,
-            f"<strong>ERROR:</strong> \n\n{e}",
+            f"<strong>ERROR:</strong> \n\n{e}\n\n{event_string}",
             parse_mode=HTML,
         )
 
