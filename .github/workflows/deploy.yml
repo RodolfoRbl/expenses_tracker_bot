@@ -8,6 +8,7 @@ on:
 env:
   AWS_REGION: eu-central-1
   FUNCTION_NAME: deploy_from_code
+  LAYER_NAME: gspread-layer
 
 jobs:
   deploy:
@@ -25,16 +26,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install boto3
 
-      - name: Configure AWS credentials
+      - name: Build gspread layer
+        run: |
+          cd layers
+          python build_gspread_layer.py
+
+      - name: Configure AWS credentials 
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Deploy Layer
+        run: |
+          LAYER_VERSION=$(aws lambda publish-layer-version \
+            --layer-name ${{ env.LAYER_NAME }} \
+            --zip-file fileb://layers/gspread_layer.zip \
+            --compatible-runtimes python3.9 \
+            --query 'Version' \
+            --output text)
+          
+          aws lambda update-function-configuration \
+            --function-name ${{ env.FUNCTION_NAME }} \
+            --layers $(aws lambda list-layer-versions \
+              --layer-name ${{ env.LAYER_NAME }} \
+              --max-items 1 \
+              --query 'LayerVersions[0].LayerVersionArn' \
+              --output text)
+
       - name: Create deployment package
         run: |
-          zip -r deployment.zip . -x ".git/*" ".github/*" "__pycache__/*" "*.pyc" "README.md"
+          zip -r deployment.zip . -x ".git/*" ".github/*" "__pycache__/*" "*.pyc" "README.md" "layers/*"
 
       - name: Deploy to Lambda
         run: |
