@@ -3,6 +3,7 @@ import shutil
 import zipfile
 from .bot import Bot
 import json
+import base64
 import os
 
 
@@ -70,3 +71,34 @@ def local_running(token, lambda_handler):
             lambda_handler(event, context=0)
             new_offset = update_for_loop["update_id"] + 1
             offset = new_offset
+
+
+def get_encoded_json_creds(file_path: str) -> str:
+    """
+    Get the encoded JSON credentials from a file.
+
+    Args:
+        file_path (str): Path to the JSON credentials file.
+
+    Returns:
+        str: Encoded JSON credentials.
+    """
+    with open(file_path, "r") as f:
+        content_dict = f.read()
+
+    encoded = base64.b64encode(content_dict.encode("utf-8")).decode("utf-8")
+    return encoded
+
+
+def decode_creds(encoded_str: str) -> str:
+    """
+    Decode a Base64-encoded string.
+
+    Args:
+        encoded_str (str): The Base64-encoded string.
+
+    Returns:
+        str: The decoded string.
+    """
+    decoded_bytes = base64.b64decode(encoded_str)
+    return decoded_bytes.decode("utf-8")

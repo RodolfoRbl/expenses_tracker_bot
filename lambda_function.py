@@ -72,9 +72,10 @@ def lambda_handler(event, context):
 
     # Errores de código
     except Exception as e:
+        event_string = json.dumps(event, indent=4)
         bot.sendMessage(
             update,
-            f"<strong>ERROR:</strong> \n\n{e}\n\n {json.dumps(event,indent=4)}",
+            f"<strong>ERROR:</strong> \n\n{e}",
             parse_mode=HTML,
         )
 
