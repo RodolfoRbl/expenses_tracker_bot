@@ -28,7 +28,7 @@ def lambda_handler(event, context):
 
     try:
         if update.user_id == MY_CHAT_ID:
-            t_inicio = threading.Thread(target=update.sendMessage, args=("Iniciando...",))
+            t_inicio = threading.Thread(target=update.sendMessage, args=("Starting...",))
             t_inicio.start()
 
             t_conectar.join()
@@ -51,15 +51,15 @@ def lambda_handler(event, context):
                     if update.commandHandler(k, v, sh=sh):
                         break
 
-            # Formatos no soportados
+            # Unsupported formats
             else:
-                texto = f"<strong>Actividad extraña:</strong> \n\n {json.dumps(event,indent=4)}"
+                texto = f"<strong>Strange activity:</strong> \n\n {json.dumps(event,indent=4)}"
                 update.sendMessage(texto, parse_mode=HTML)
 
-        # Usuarios diferentes
+        # Different users
         else:
             unknown_user = (
-                f"<strong>Usuario desconocido:</strong> \n\n {json.dumps(event,indent=4)}"
+                f"<strong>Unknown user:</strong> \n\n {json.dumps(event,indent=4)}"
             )
             bot.post(
                 "sendMessage",
@@ -70,7 +70,7 @@ def lambda_handler(event, context):
                 },
             )
 
-    # Errores de código
+    # Code errors
     except Exception as e:
         event_string = json.dumps(event, indent=4)
         bot.sendMessage(
