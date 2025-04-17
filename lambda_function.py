@@ -28,9 +28,7 @@ def lambda_handler(event, context):
 
     try:
         if update.user_id == MY_CHAT_ID:
-            t_inicio = threading.Thread(
-                target=update.sendMessage, args=("Iniciando...",)
-            )
+            t_inicio = threading.Thread(target=update.sendMessage, args=("Iniciando...",))
             t_inicio.start()
 
             t_conectar.join()
@@ -46,7 +44,7 @@ def lambda_handler(event, context):
                     "get_debt": h.cmd_get_debt,
                     "debt": h.cmd_add_debt_record,
                     "find": h.cmd_find_pattern,
-                    'delete_debt': h.cmd_delete_debt_record
+                    "delete_debt": h.cmd_delete_debt_record,
                 }
 
                 for k, v in handlers.items():
@@ -60,7 +58,9 @@ def lambda_handler(event, context):
 
         # Usuarios diferentes
         else:
-            unknown_user = f"<strong>Usuario desconocido:</strong> \n\n {json.dumps(event,indent=4)}"
+            unknown_user = (
+                f"<strong>Usuario desconocido:</strong> \n\n {json.dumps(event,indent=4)}"
+            )
             bot.post(
                 "sendMessage",
                 params={

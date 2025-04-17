@@ -3,7 +3,6 @@ from threading import Thread
 
 
 class CustomThread(Thread):
-
     def __init__(self, func, *args, **kwargs) -> None:
         Thread.__init__(self)
         self.func = func
@@ -30,4 +29,3 @@ def wait(sec, name):
 def something_else():
     for i in range(4):
         print(f"doing something else {i}")
-

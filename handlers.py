@@ -79,9 +79,7 @@ def cmd_add_debt_record(update: Update, sh: Spreadsheet):
 
 def cmd_find_pattern(update: Update, sh: Spreadsheet):
     try:
-        pattern = (
-            update.text.split(maxsplit=1)[1] if len(update.text.split()) > 1 else None
-        )
+        pattern = update.text.split(maxsplit=1)[1] if len(update.text.split()) > 1 else None
 
         if not pattern:
             update.sendMessage("Falta el patrón de búsqueda")
@@ -157,9 +155,7 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
     short_desc = {k: v for k, v in all_shortcuts.items() if isinstance(v, str)}
     shortcuts = {k: v for k, v in all_shortcuts.items() if isinstance(v, int)}
     nar = sh.get_next_available_row()
-    formatted_msg = (
-        lambda desc, cost: f"""A{nar} | B{nar} | C{nar}\n{desc} | ${cost}.00 | {date}"""
-    )
+    formatted_msg = lambda desc, cost: f"""A{nar} | B{nar} | C{nar}\n{desc} | ${cost}.00 | {date}"""
 
     if info_split[0] == ".":
         desc, cost, _ = sh.wks.get(f"A{nar-1}:C{nar-1}")[0]
@@ -176,9 +172,7 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
 
     elif numero_primero or numero_final:
         cost = info_split[0] if numero_primero else info_split[-1]
-        description = (
-            " ".join(info_split[1:]) if numero_primero else " ".join(info_split[0:-1])
-        )
+        description = " ".join(info_split[1:]) if numero_primero else " ".join(info_split[0:-1])
         if len(info_split) == 2 and description.lower() in short_desc:
             description = short_desc[description.lower()]
         update.sendMessage(formatted_msg(description, cost))

@@ -18,15 +18,7 @@ class Update(Bot):
         return super().answerCallbackQuery(self.callback_query_id)
 
     def sendInvoice(
-        self,
-        title,
-        description,
-        payload,
-        provider_token,
-        currency,
-        label,
-        price,
-        **kwargs
+        self, title, description, payload, provider_token, currency, label, price, **kwargs
     ):
         return super().sendInvoice(
             self.chat_id,
@@ -42,9 +34,7 @@ class Update(Bot):
 
     def editMessageText(self, text, message_id="callback", **kwargs):
         if message_id == "callback":
-            return super().editMessageText(
-                self.user_id, self.callback_message_id, text, **kwargs
-            )
+            return super().editMessageText(self.user_id, self.callback_message_id, text, **kwargs)
         else:
             return super().editMessageText(self.user_id, message_id, text, **kwargs)
 
@@ -94,12 +84,8 @@ class Update(Bot):
             self.currency = self.successful_payment["currency"]
             self.total_amount = self.successful_payment["total_amount"]
             self.invoice_payload = self.successful_payment["invoice_payload"]
-            self.telegram_payment_charge_id = self.successful_payment[
-                "telegram_payment_charge_id"
-            ]
-            self.provider_payment_charge_id = self.successful_payment[
-                "provider_payment_charge_id"
-            ]
+            self.telegram_payment_charge_id = self.successful_payment["telegram_payment_charge_id"]
+            self.provider_payment_charge_id = self.successful_payment["provider_payment_charge_id"]
 
     def callback_query_classifier(self):
         self.callback_query = self.update_dict["callback_query"]
@@ -134,9 +120,7 @@ class Update(Bot):
             return 1
         return 0
 
-    def messageHandler(
-        self, text: str = "default", function=None, regex=False, **kwargs
-    ):
+    def messageHandler(self, text: str = "default", function=None, regex=False, **kwargs):
         if self.text and self.command is None:
             if text == self.text or text == "default":
                 function(self, **kwargs)

@@ -3,7 +3,6 @@ from gspread import service_account_from_dict
 
 class Spreadsheet:
     def __init__(self, file, sheet, creds_dict) -> None:
-
         self.file = file
         self.sheet = sheet
 
