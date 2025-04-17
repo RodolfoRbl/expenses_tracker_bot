@@ -4,9 +4,7 @@ from base.utils import decode_creds
 
 TOKEN_GOOGLE = json.loads(decode_creds(os.getenv("TOKEN_GOOGLE")))
 TOKEN_BOT = os.getenv("TOKEN_BOT")
-MY_CHAT_ID = int(
-    os.getenv("MY_CHAT_ID"),
-)
+MY_CHAT_ID = int(os.getenv("MY_CHAT_ID", 0))
 FILE_NAME = os.getenv("FILE_NAME")
 SHEET_NAME = os.getenv("SHEET_NAME")
 
