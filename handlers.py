@@ -144,6 +144,7 @@ def cmd_show_menu(update: Update, sh: Spreadsheet):
 def handle_callback_query(update: Update, sh: Spreadsheet):
     """Handle callback queries from inline keyboard buttons"""
     query_data = update.callback_data
+    update.answerCallbackQuery()
 
     if query_data == "month_total":
         total = sh.get_month_total()
