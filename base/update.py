@@ -9,6 +9,8 @@ class Update(Bot):
         self.update_dict: dict = update_dict
         self.full_string: str = json.dumps(update_dict, indent=5)
         self.update_id: str = update_dict["update_id"]
+        self.callback_query = None
+        self.callback_data = None
         self.__classify()
 
     def sendMessage(self, texto, **kwargs):
@@ -89,10 +91,12 @@ class Update(Bot):
 
     def callback_query_classifier(self):
         self.callback_query = self.update_dict["callback_query"]
+        self.callback_data = self.callback_query.get("data")
+        self.user_id = self.callback_query["from"]["id"]
+        self.message_id = self.callback_query["message"]["message_id"]
         self.callback_query_id = self.callback_query["id"]
         self.chat_id = self.callback_query["message"]["chat"]["id"]
         self.callback_message_id = self.callback_query["message"]["message_id"]
-        self.user_id = self.callback_query["from"]["id"]
         self.callback_data: str = self.callback_query.get("data", "")
 
     def edited_message_classifier(self):

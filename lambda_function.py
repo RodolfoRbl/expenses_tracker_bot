@@ -33,11 +33,15 @@ def lambda_handler(event, context):
 
             t_conectar.join()
 
-            if update.text and not update.command:
+            if update.callback_query:
+                h.handle_callback_query(update, sh)
+
+            elif update.text and not update.command:
                 update.messageHandler("default", h.cmd_text_general, sh=sh)
 
             elif update.command:
                 handlers = {
+                    "menu": h.cmd_show_menu,
                     "last_records": h.cmd_last_records,
                     "delete_last_record": h.cmd_delete_last_record,
                     "update_json": h.cmd_update_json,
@@ -58,9 +62,7 @@ def lambda_handler(event, context):
 
         # Different users
         else:
-            unknown_user = (
-                f"<strong>Unknown user:</strong> \n\n {json.dumps(event,indent=4)}"
-            )
+            unknown_user = f"<strong>Unknown user:</strong> \n\n {json.dumps(event,indent=4)}"
             bot.post(
                 "sendMessage",
                 params={
