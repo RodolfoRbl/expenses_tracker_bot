@@ -51,10 +51,11 @@ jobs:
           # Build the full layer ARN
           LAYER_ARN="arn:aws:lambda:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:layer:${{ env.LAYER_NAME }}:$LAYER_VERSION"
 
-          # Attach  layer to the function
+          # Attach layer to the function
           aws lambda update-function-configuration \
             --function-name ${{ env.FUNCTION_NAME }} \
-            --layers $LAYER_ARN
+            --layers $LAYER_ARN \
+            --handler src.lambda_function.lambda_handler
 
       - name: Create deployment package
         run: |
