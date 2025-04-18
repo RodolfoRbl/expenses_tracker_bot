@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install dependencies
         run: |
@@ -31,7 +31,7 @@ jobs:
           cd layers
           python build_gspread_layer.py
 
-      - name: Configure AWS credentials 
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -40,20 +40,21 @@ jobs:
 
       - name: Deploy Layer
         run: |
+          # Publish the layer
           LAYER_VERSION=$(aws lambda publish-layer-version \
             --layer-name ${{ env.LAYER_NAME }} \
             --zip-file fileb://layers/gspread_layer.zip \
             --compatible-runtimes python3.9 \
             --query 'Version' \
             --output text)
-          
+
+          # Build the full layer ARN
+          LAYER_ARN="arn:aws:lambda:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:layer:${{ env.LAYER_NAME }}:$LAYER_VERSION"
+
+          # Attach  layer to the function
           aws lambda update-function-configuration \
             --function-name ${{ env.FUNCTION_NAME }} \
-            --layers $(aws lambda list-layer-versions \
-              --layer-name ${{ env.LAYER_NAME }} \
-              --max-items 1 \
-              --query 'LayerVersions[0].LayerVersionArn' \
-              --output text)
+            --layers $LAYER_ARN
 
       - name: Create deployment package
         run: |
