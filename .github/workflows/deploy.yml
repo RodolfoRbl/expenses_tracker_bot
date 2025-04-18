@@ -11,25 +11,10 @@ env:
   LAYER_NAME: gspread-layer
 
 jobs:
-  deploy:
+  build-layer:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install boto3
-
-      - name: Build gspread layer
-        run: |
-          cd layers
-          python build_gspread_layer.py
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -37,16 +22,27 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Deploy Layer
+
+      - name: Deploy Layer if not exists
         run: |
           # Check if the layer already exists
           EXISTING_LAYER_VERSION=$(aws lambda list-layer-versions \
           --layer-name ${{ env.LAYER_NAME }} \
           --query 'LayerVersions[0].Version' \
-          --output text || echo "NONE")
+          --region ${{ env.AWS_REGION }} \
+          --output text)
+          echo "Existing Layer Version: $EXISTING_LAYER_VERSION"
 
-          if [ "$EXISTING_LAYER_VERSION" = "NONE" ]; then
+          if [ "$EXISTING_LAYER_VERSION" = "None" ]; then
           echo "Layer does not exist. Deploying new layer..."
+
+          # Create a zip file for the layer
+          mkdir -p python
+          pip install gspread==6.1.2 -t python
+          zip -r gspread_layer.zip python
+          mkdir -p layers
+          mv gspread_layer.zip layers/
+          rm -rf python
 
           # Publish the layer
           LAYER_VERSION=$(aws lambda publish-layer-version \
@@ -64,15 +60,27 @@ jobs:
             --function-name ${{ env.FUNCTION_NAME }} \
             --layers $LAYER_ARN \
             --handler lambda_function.lambda_handler
-          
+
           else
           echo "Layer already exists. Skipping deployment."
             fi
 
+  deploy-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Create deployment package
         run: |
           cd src
-          zip -r ../deployment.zip . -x ".git/*" ".github/*" "__pycache__/*" "*.pyc" "README.md" "layers/*"
+          zip -r ../deployment.zip . -x ".git/*" ".github/*" "__pycache__/*" "*.pyc"
 
       - name: Deploy to Lambda
         run: |
