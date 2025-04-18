@@ -25,6 +25,7 @@ commands = {
     "update_json": "Get the JSON update",
     "find": "Find a pattern in the file",
     "delete_debt": "Delete the last debt record",
+    "menu": "Show menu"
 }
 
 # Parse modes
