@@ -6,9 +6,12 @@ from .keyboards import (
     get_stats_keyboard,
     get_history_keyboard,
     get_settings_keyboard,
+    CATEGORIES,
 )
 from .db import ExpenseDB
 from decimal import Decimal
+
+cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 
 
 async def start_handler(update: Update, context: CallbackContext):
@@ -167,7 +170,7 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
     await query.answer()
 
     if query.data.startswith("cat_"):
-        category = query.data[4:]
+        cat_name = query.data[4:]
         user_id = str(query.from_user.id)
         try:
             # Get the pending state from the database
@@ -186,7 +189,7 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
             db.insert_expense(
                 user_id=user_id,
                 amount=amount,
-                category=category,
+                category=str(cat_map[cat_name]),
                 currency="USD",  # Default currency
                 description=description,
                 income=is_income,
@@ -194,7 +197,7 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
         except Exception as e:
             await query.edit_message_text(f"Error inserting expense: {str(e)}")
             return
-        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {category}")
+        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
         try:
             # Remove the pending entry from the state table
             db.state_table.delete_item(Key={"user_id": user_id})

@@ -104,7 +104,7 @@ class ExpenseDB:
         # Parse the timezone string (e.g., "UTC-6" or "UTC+3")
         tz = self._parse_timezone(timezone)
         current_time = datetime.now(tz)
-        timestamp = current_time.isoformat()
+        timestamp = str(int(current_time.timestamp()))
         date_str = current_time.strftime("%Y-%m-%d")
 
         item = {

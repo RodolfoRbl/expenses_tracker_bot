@@ -1,20 +1,20 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
-# Categories and menus with emojis
-CATEGORIES = [
-    "🍔 Food",
-    "🚌 Transport",
-    "🏠 Rent",
-    "💡 Utilities",
-    "🎮 Entertainment",
-    "🛒 Groceries",
-    "💊 Health",
-    "💼 Business",
-    "🎁 Gifts",
-    "✈️ Travel",
-    "📚 Education",
-    "❓ Other",
-]
+# Categories mapping for msgs and database
+CATEGORIES = {
+    "🍔 Food": 0,
+    "🚌 Transport": 1,
+    "🏠 Rent": 2,
+    "💡 Utilities": 3,
+    "🎮 Entertainment": 4,
+    "🛒 Groceries": 5,
+    "💊 Health": 6,
+    "💼 Business": 7,
+    "🎁 Gifts": 8,
+    "✈️ Travel": 9,
+    "📚 Education": 10,
+    "❓ Other": 11,
+}
 
 MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
 
@@ -24,7 +24,9 @@ def build_menu(buttons, n_cols=2):
 
 
 def get_category_keyboard():
-    buttons = [InlineKeyboardButton(cat, callback_data=f"cat_{cat.split()[-1]}") for cat in CATEGORIES]
+    buttons = [
+        InlineKeyboardButton(cat, callback_data=f"cat_{cat.split()[-1]}") for cat in CATEGORIES
+    ]
     return build_menu(buttons, n_cols=3)
 
 
