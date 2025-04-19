@@ -16,6 +16,13 @@ CATEGORIES = {
     "❓ Other": 11,
 }
 
+HISTORY_WINDOWS = [
+    "Today",
+    "This Week",
+    "This Month",
+    "Last Month",
+]
+
 MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
 
 
@@ -44,8 +51,7 @@ def get_stats_keyboard():
 
 
 def get_history_keyboard():
-    periods = ["Today", "This Week", "This Month", "Last Month", "Custom Range", "Cancel"]
-    buttons = [InlineKeyboardButton(p, callback_data=f"history_{p}") for p in periods]
+    buttons = [InlineKeyboardButton(p, callback_data=f"hist_{p}") for p in HISTORY_WINDOWS]
     return build_menu(buttons, n_cols=1)
 
 

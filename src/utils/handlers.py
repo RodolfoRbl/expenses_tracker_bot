@@ -10,6 +10,7 @@ from .keyboards import (
 )
 from .db import ExpenseDB
 from decimal import Decimal
+from datetime import datetime, timedelta
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 
@@ -93,8 +94,8 @@ Backdate expenses. Example: <code>50 groceries yesterday</code> or <code>50 groc
 ✏️ <b>Record Editing</b>
 Edit or delete <b><i>any</i></b> entry — not just the last one.
 
-🫂 <b>Shared Recording</b>
-Record expenses or income for your partner using <code>@username</code>
+📅 <b>Custom History</b>
+Specify a date range for your history. Example: <code>2024-01-15 2024-03-25</code>
 
 🧾 <b>Export</b>
 Download your data to <b>Excel/CSV</b> for backups or analysis.
@@ -165,49 +166,99 @@ async def message_handler(update: Update, context: CallbackContext, db: ExpenseD
         await update.message.reply_text(f"Error recording expense: {str(e)}")
 
 
-async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def category_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     await query.answer()
+    user_id = str(query.from_user.id)
+    cat_name = query.data[4:]
+    try:
+        # Get the pending state from the database
+        state = db.get_state(user_id)
+        if not state:
+            await query.edit_message_text("No pending expense or income to log.")
+            return
+        amount = state.get("pend_amt")
+        description = state.get("pend_desc")
+        is_income = state.get("pend_inc")
+    except Exception as e:
+        await query.edit_message_text(f"Error fetching state: {str(e)}")
+        return
+    try:
+        # Log the expense or income
+        db.insert_expense(
+            user_id=user_id,
+            amount=amount,
+            category=str(cat_map[cat_name]),
+            currency="USD",  # Default currency
+            description=description,
+            income=is_income,
+        )
+    except Exception as e:
+        await query.edit_message_text(f"Error inserting expense: {str(e)}")
+        return
+    await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
+    try:
+        # Remove the pending entry from the state table
+        db.state_table.delete_item(Key={"user_id": user_id})
+    except Exception as e:
+        await query.edit_message_text(f"Error deleting pending state: {str(e)}")
+        return
 
+
+async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
+    query = update.callback_query
+    await query.answer()
+    user_id = str(query.from_user.id)
+    window = query.data[5:]
+    tz = db._parse_timezone("UTC-6")
+    today_dt = datetime.now(tz)
+    try:
+        if window == "Today":
+            data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
+        elif window == "This Week":
+            start_date = today_dt - timedelta(days=today_dt.weekday())
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif window == "This Month":
+            start_date = today_dt.replace(day=1)
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif window == "Last Month":
+            first_of_month = today_dt.replace(day=1)
+            start_date = (first_of_month - timedelta(days=1)).replace(day=1)
+            last_day_dt = first_of_month - timedelta(days=1)
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, last_day_dt)
+        else:
+            await query.edit_message_text(f"Invalid time window: {window}")
+            return
+
+        if not data:
+            await query.edit_message_text("No records found for the selected time window.")
+            return
+
+        parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
+        history = "\n".join(
+            f"{item['date']}: ${item['amount']:,.2f} - {parse_cat_id(item['category'])}"
+            + (f" ({item['description']})" if item["description"] else "")
+            for item in data
+        )
+        await query.edit_message_text(
+            f"📅 <b>History for {window}</b>:\n\n{history}",
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        await query.edit_message_text(f"Error fetching history: {str(e)}")
+
+
+async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    query = update.callback_query
     if query.data.startswith("cat_"):
-        cat_name = query.data[4:]
-        user_id = str(query.from_user.id)
-        try:
-            # Get the pending state from the database
-            state = db.get_state(user_id)
-            if not state:
-                await query.edit_message_text("No pending expense or income to log.")
-                return
-            amount = state.get("pend_amt")
-            description = state.get("pend_desc")
-            is_income = state.get("pend_inc")
-        except Exception as e:
-            await query.edit_message_text(f"Error fetching state: {str(e)}")
-            return
-        try:
-            # Log the expense or income
-            db.insert_expense(
-                user_id=user_id,
-                amount=amount,
-                category=str(cat_map[cat_name]),
-                currency="USD",  # Default currency
-                description=description,
-                income=is_income,
-            )
-        except Exception as e:
-            await query.edit_message_text(f"Error inserting expense: {str(e)}")
-            return
-        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
-        try:
-            # Remove the pending entry from the state table
-            db.state_table.delete_item(Key={"user_id": user_id})
-        except Exception as e:
-            await query.edit_message_text(f"Error deleting pending state: {str(e)}")
-            return
+        await category_callback_handler(update, context, db)
 
     elif query.data.startswith("stats_"):
         period = query.data[6:]
         await query.edit_message_text(f"Stats for {period} (coming soon)")
+
+    elif query.data.startswith("hist_"):
+        await history_callback_handler(update, context, db)
 
 
 async def stats_handler(update: Update, context: CallbackContext):
@@ -225,4 +276,22 @@ async def settings_handler(update: Update, context: CallbackContext):
         "⚠️ <i>Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️",
         parse_mode="HTML",
         reply_markup=get_settings_keyboard(),
+    )
+
+
+async def categories_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def export_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Export command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def budget_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
     )
