@@ -24,7 +24,7 @@ def build_menu(buttons, n_cols=2):
 
 
 def get_category_keyboard():
-    buttons = [InlineKeyboardButton(cat, callback_data=f"cat_{cat}") for cat in CATEGORIES]
+    buttons = [InlineKeyboardButton(cat, callback_data=f"cat_{cat.split()[-1]}") for cat in CATEGORIES]
     return build_menu(buttons, n_cols=3)
 
 
@@ -51,3 +51,7 @@ def get_settings_keyboard():
     options = ["💵 Currency", "🌐 Language", "⏰ Timezone", "📂 Categories"]
     buttons = [InlineKeyboardButton(opt, callback_data=f"settings_{opt}") for opt in options]
     return build_menu(buttons, n_cols=2)
+
+
+def get_start_keyboard():
+    return ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)

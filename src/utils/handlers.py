@@ -1,15 +1,14 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update
 from telegram.ext import CallbackContext
 from .keyboards import (
-    MAIN_MENU,
+    get_start_keyboard,
     get_category_keyboard,
     get_stats_keyboard,
     get_history_keyboard,
     get_settings_keyboard,
 )
-
-# State storage
-user_pending_expenses = {}
+from .db import ExpenseDB
+from decimal import Decimal
 
 
 async def start_handler(update: Update, context: CallbackContext):
@@ -36,13 +35,13 @@ Here's what I can do for you:
 Let’s get your finances under control 🚀
 """,
         parse_mode="HTML",
-        reply_markup=ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True),
+        reply_markup=get_start_keyboard(),
     )
 
 
 async def help_handler(update: Update, context: CallbackContext):
     help_text = """
-⚙️ Commands Overview
+⚙️ <b>Bot Commands</b>
 
 <b>/stats</b> 📊 – Show spending statistics
 
@@ -65,7 +64,7 @@ async def help_handler(update: Update, context: CallbackContext):
 <b>/budget</b> 🎯 – Set a monthly budget ⭐️
 
 
-⭐️ = Premium features (available with a subscription)
+⭐️ = <i>Premium features (available with a subscription)</i>
 """
     await update.message.reply_text(
         help_text,
@@ -100,43 +99,108 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
     await update.message.reply_text(premium_text, parse_mode="HTML")
 
 
-async def message_handler(update: Update, context: CallbackContext):
-    text = update.message.text.strip()
+async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
+    # Split the text into words
     words = text.split()
-    amount = None
-    description = None
-
-    # Check if the first word is a number
-    if words[0].replace(".", "", 1).isdigit():
+    is_last_digit = words[-1].lstrip("+-").replace(".", "", 1).isdigit()
+    is_first_digit = words[0].lstrip("+-").replace(".", "", 1).isdigit()
+    if len(words) == 1 and is_first_digit:
+        amount = float(words[0])
+        description = ""
+        is_income = "+" in words[0]
+    elif len(words) < 2:
+        await update.message.reply_text("Please use the format: amount description")
+        return [None] * 3
+    elif is_last_digit and is_first_digit:
+        await update.message.reply_text(
+            "Invalid format. Digits should be at the start or end, not both."
+        )
+        return [None] * 3
+    # Check if the first or last word is a valid amount
+    elif is_first_digit:
+        is_income = "+" in words[0]
         amount = float(words[0])
         description = " ".join(words[1:])
-    # Check if the last word is a number
-    elif words[-1].replace(".", "", 1).isdigit():
+    elif is_last_digit:
+        is_income = "+" in words[-1]
         amount = float(words[-1])
         description = " ".join(words[:-1])
+    else:
+        await update.message.reply_text("Please use the format: amount description")
+        return [None] * 3
+    return amount, description, is_income
 
-    if amount is not None:
-        user_pending_expenses[update.message.from_user.id] = amount
-        desc_text = f"\n<b>Description</b>: {description}" if description else ""
+
+async def message_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    text = update.message.text.strip()
+    if len(text) >= 100:
+        await update.message.reply_text("Message too long. Please keep it under 100 characters.")
+        return
+    user_id = str(update.effective_user.id)
+
+    amount, description, is_income = await _parse_msg_to_elements(update, text)
+
+    if is_income is None:
+        return
+    try:
+        _desc = f"<b>Description</b>: {description}" if description else ""
         await update.message.reply_text(
-            f"<b>Amount:</b> ${amount:,.2f}{desc_text}",
+            f"<b>{'Income' if is_income else 'Expense'}</b>: ${amount:,.2f}\n{_desc}\n"
+            "Please select a category:",
             parse_mode="HTML",
             reply_markup=get_category_keyboard(),
         )
-    else:
-        await update.message.reply_text("Please include an amount (e.g. 12.50)")
+        db.state_table.put_item(
+            Item={
+                "user_id": user_id,
+                "pend_amt": Decimal(str(amount)),
+                "pend_desc": description,
+                "pend_inc": is_income,
+            }
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Error recording expense: {str(e)}")
 
 
-async def callback_handler(update: Update, context: CallbackContext):
+async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     await query.answer()
 
     if query.data.startswith("cat_"):
         category = query.data[4:]
-        user_id = query.from_user.id
-        if user_id in user_pending_expenses:
-            amount = user_pending_expenses.pop(user_id)
-            await query.edit_message_text(f"✅ Logged: ${amount} in {category}")
+        user_id = str(query.from_user.id)
+        try:
+            # Get the pending state from the database
+            state = db.get_state(user_id)
+            if not state:
+                await query.edit_message_text("No pending expense or income to log.")
+                return
+            amount = state.get("pend_amt")
+            description = state.get("pend_desc")
+            is_income = state.get("pend_inc")
+        except Exception as e:
+            await query.edit_message_text(f"Error fetching state: {str(e)}")
+            return
+        try:
+            # Log the expense or income
+            db.insert_expense(
+                user_id=user_id,
+                amount=amount,
+                category=category,
+                currency="USD",  # Default currency
+                description=description,
+                income=is_income,
+            )
+        except Exception as e:
+            await query.edit_message_text(f"Error inserting expense: {str(e)}")
+            return
+        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {category}")
+        try:
+            # Remove the pending entry from the state table
+            db.state_table.delete_item(Key={"user_id": user_id})
+        except Exception as e:
+            await query.edit_message_text(f"Error deleting pending state: {str(e)}")
+            return
 
     elif query.data.startswith("stats_"):
         period = query.data[6:]
@@ -155,7 +219,7 @@ async def history_handler(update: Update, context: CallbackContext):
 
 async def settings_handler(update: Update, context: CallbackContext):
     await update.message.reply_text(
-        "⚠️ Settings available only for ⭐️<b>PREMIUM</b>⭐️ users ⚠️:",
+        "⚠️ <i>Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️",
         parse_mode="HTML",
         reply_markup=get_settings_keyboard(),
     )

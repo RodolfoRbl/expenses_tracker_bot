@@ -9,7 +9,9 @@ class ExpenseDB:
     def __init__(self, region_name: str):
         self.dynamodb = boto3.resource("dynamodb", region_name=region_name)
         self.table_name = "Expenses"
+        self.user_states_table = "Telegram_bot_states"
         self.table = self.dynamodb.Table(self.table_name)
+        self.state_table = self.dynamodb.Table(self.user_states_table)
         self.region_name = region_name
 
     def create_table(self) -> None:
@@ -46,6 +48,30 @@ class ExpenseDB:
         )
         self.table.wait_until_exists()
         print(f"Table '{self.table_name}' created.")
+
+    def create_user_state_table(self) -> None:
+        existing_tables = boto3.client("dynamodb", region_name=self.region_name).list_tables()[
+            "TableNames"
+        ]
+        if self.user_states_table in existing_tables:
+            print(f"Table '{self.user_states_table}' already exists.")
+            return
+
+        self.table = self.dynamodb.create_table(
+            TableName=self.user_states_table,
+            KeySchema=[{"AttributeName": "user_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "user_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
+        )
+        self.table.wait_until_exists()
+        print(f"Table '{self.user_states_table}' created.")
+
+    def get_state(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get the state of a user from the user states table.
+        """
+        response = self.state_table.get_item(Key={"user_id": user_id})
+        return response.get("Item", {})
 
     def _parse_timezone(self, timezone_str: str) -> timezone:
         """
@@ -115,12 +141,25 @@ class ExpenseDB:
 
         return items
 
-    def summarize_by_category(expenses: List[Dict[str, Any]]) -> Dict[str, float]:
+    def fetch_latest_expenses(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Fetch the most recent expenses for a user."""
+        response = self.table.query(
+            KeyConditionExpression=Key("user_id").eq(user_id),
+            ScanIndexForward=False,  # Sort in descending order
+            Limit=limit,
+        )
+        return response.get("Items", [])
+
+    def summarize_by_category(self, expenses: List[Dict[str, Any]]) -> Dict[str, float]:
         summary = {}
         for item in expenses:
+            category = item.get("category", "uncategorized")
+            amount = float(item.get("amount", 0))
             if not item.get("income", False):
-                category = item.get("category", "uncategorized")
-                summary[category] += float(item.get("amount", 0))
+                summary[category] = summary.get(category, 0) + amount
+            else:
+                # Track income separately with a special category
+                summary["💰 Income"] = summary.get("💰 Income", 0) + amount
         return summary
 
     def delete_last_record(self, user_id: str) -> bool:
@@ -150,21 +189,22 @@ if __name__ == "__main__":
 
     # Create and populate table
     db.create_table()
-    db.insert_expense(
-        user_id="123456",
-        amount=25.5,
-        category="groceries",
-        currency="USD",
-        description="Milk and eggs",
-        income=False,
-    )
+    db.create_user_state_table()
+    # db.insert_expense(
+    #     user_id="123456",
+    #     amount=25.5,
+    #     category="groceries",
+    #     currency="USD",
+    #     description="Milk and eggs",
+    #     income=False,
+    # )
 
-    # Query data
-    start = date(2024, 1, 1)
-    end = date(2025, 12, 31)
-    records = db.fetch_expenses_by_user_and_date("123456", start, end)
-    print("Fetched records:", records)
-    print("Summary:", db.summarize_by_category(records))
+    # # Query data
+    # start = date(2024, 1, 1)
+    # end = date(2025, 12, 31)
+    # records = db.fetch_expenses_by_user_and_date("123456", start, end)
+    # print("Fetched records:", records)
+    # print("Summary:", db.summarize_by_category(records))
 
     # Delete table example (uncomment to use)
     # db.delete_table()
