@@ -1,21 +1,20 @@
-# Expenses Tracker Bot
+# Expenses Tracker Bot (Fundu)
 
-A Telegram bot that helps you track your daily expenses by storing them in a Google Spreadsheet. Perfect for personal finance management and expense tracking.
+A Telegram bot that helps you track your daily expenses with rich analytics and reporting features. Perfect for personal finance management and expense tracking.
 
 ## Features
 
-- Record expenses with simple text messages
-- View recent expense records
-- Search through expense history
-- Track debts separately
-- Automatic date stamping
-- Secure Google Sheets integration
+- 💰 Record expenses and income with simple text messages
+- 📊 View detailed spending statistics across different time periods
+- 📝 Track expenses across multiple categories
+- 📆 View expense history with flexible time ranges
+- ⚡️ Quick and intuitive expense categorization
+- 💎 Premium features available via subscription
 
 ## Prerequisites
 
 - Python 3.9+
 - A Telegram account
-- Google Cloud Platform account with Sheets API enabled
 - AWS account (for Lambda deployment)
 
 ## Setup
@@ -33,45 +32,62 @@ pip install -r requirements.txt
 
 3. Set up environment variables:
 ```bash
-# Required environment variables
-TOKEN_BOT=your_telegram_bot_token
-TOKEN_GOOGLE=your_base64_encoded_google_credentials
-MY_CHAT_ID=your_telegram_chat_id
-FILE_NAME=your_google_sheets_filename
-SHEET_NAME=your_sheet_name
-EXPENSES_SHORTCUTS=your_sheet_nameyour_dictionary_of_expenses_shortcuts
+# Create a .env file with:
+BOT_TOKEN=your_telegram_bot_token
 ```
-
-4. Configure Google Sheets:
-   - Create a service account in Google Cloud Console
-   - Enable Google Sheets API
-   - Share your spreadsheet with the service account email
-   - Base64 encode your credentials JSON file
 
 ## Usage
 
 ### Basic Commands
 
-- `/last_records` - Get the last 5 expense records
-- `/delete_last_record` - Delete the last record
-- `/debt` - Add a debt record
-- `/get_debt` - View all debt records
-- `/find pattern` - Search for expenses matching pattern
-- `/delete_debt` - Delete the last debt record
+- `/start` - Initialize the bot and see overview
+- `/stats` - View spending statistics
+- `/list` - See your expense history
+- `/delete` - Remove your last record
+- `/help` - Show all available commands
+
+### Premium Features
+
+- 👛 Monthly Budget Setting
+- 💶 Multi-currency Support
+- 📅 Custom Date Recording
+- ✏️ Record Editing
+- 🫂 Shared Recording
+- 🧾 Data Export (Excel/CSV)
 
 ### Recording Expenses
 
 Simply send a message with amount and description:
 ```
 100 groceries
-groceries 100
-50.5 taxi ride
+50.5 taxi
+food 75
 ```
+
+For income, use the + symbol:
+```
++1000 salary
+```
+
+### Categories
+
+Available expense categories:
+- 🍔 Food
+- 🚌 Transport
+- 🏠 Rent
+- 💡 Utilities
+- 🎮 Entertainment
+- 🛒 Groceries
+- 💊 Health
+- 💼 Business
+- 🎁 Gifts
+- ✈️ Travel
+- 📚 Education
+- ❓ Other
 
 ## Deployment
 
 The bot is designed to run on AWS Lambda. Deployment is automated via GitHub Actions when pushing to the `dev` branch.
-
 
 ## Contributing
 
