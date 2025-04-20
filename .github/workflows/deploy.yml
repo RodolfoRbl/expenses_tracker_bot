@@ -7,8 +7,8 @@ on:
 
 env:
   AWS_REGION: eu-central-1
-  FUNCTION_NAME: deploy_from_code
-  LAYER_NAME: gspread-layer
+  FUNCTION_NAME: ai_expenses_bot
+  LAYER_NAME: telegram-bot-layer
 
 jobs:
   build-layer:
@@ -38,16 +38,16 @@ jobs:
 
           # Create a zip file for the layer
           mkdir -p python
-          pip install gspread==6.1.2 -t python
-          zip -r gspread_layer.zip python
+          pip install -r requirements.txt -t python
+          zip -r my_layer.zip python
           mkdir -p layers
-          mv gspread_layer.zip layers/
+          mv my_layer.zip layers/
           rm -rf python
 
           # Publish the layer
           LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name ${{ env.LAYER_NAME }} \
-          --zip-file fileb://layers/gspread_layer.zip \
+          --zip-file fileb://layers/my_layer.zip \
           --compatible-runtimes python3.9 \
           --query 'Version' \
           --output text)
@@ -59,7 +59,8 @@ jobs:
           aws lambda update-function-configuration \
             --function-name ${{ env.FUNCTION_NAME }} \
             --layers $LAYER_ARN \
-            --handler lambda_function.lambda_handler
+            --handler lambda_function.lambda_handler \
+            --timeout 30
 
           else
           echo "Layer already exists. Skipping deployment."
