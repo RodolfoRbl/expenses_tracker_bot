@@ -87,7 +87,7 @@ To record income, use a <b>+</b> sign:
 
 Here's what I can do for you:
 
-/summary 📊   View your spending stats
+/stats 📊   View your spending stats
 /history 📋   See your full expense history
 /delete ❌   Remove your last record
 /help 🆘   Full list of available commands
@@ -103,7 +103,7 @@ async def help_handler(update: Update, context: CallbackContext):
     help_text = """
 ⚙️ <b>Bot Commands</b>
 
-<b>/summary</b> 📊 – Show spending statistics
+<b>/stats</b> 📊 – Show spending statistics
 
 <b>/delete</b> ❌ – Remove your last record
 

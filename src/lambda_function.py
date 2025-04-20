@@ -44,14 +44,14 @@ app.add_handler(CommandHandler("start", start_handler))
 app.add_handler(CommandHandler("help", help_handler))
 app.add_handler(CommandHandler("settings", settings_handler))
 app.add_handler(CommandHandler("subscription", subscription_handler))
-app.add_handler(CommandHandler("summary", stats_handler))
+app.add_handler(CommandHandler("stats", stats_handler))
 app.add_handler(CommandHandler("history", history_handler))
 
 # Menu options
 app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
 app.add_handler(MessageHandler(filters.Regex("^⚙️ Settings$"), settings_handler))
 app.add_handler(MessageHandler(filters.Regex("^⭐ Subscription$"), subscription_handler))
-app.add_handler(MessageHandler(filters.Regex("^💹 Summary$"), stats_handler))
+app.add_handler(MessageHandler(filters.Regex("^💹 Stats$"), stats_handler))
 app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler))
 
 # Pass the database instance to handlers
