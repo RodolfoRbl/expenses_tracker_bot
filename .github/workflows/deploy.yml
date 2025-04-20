@@ -60,7 +60,8 @@ jobs:
             --function-name ${{ env.FUNCTION_NAME }} \
             --layers $LAYER_ARN \
             --handler lambda_function.lambda_handler \
-            --timeout 30
+            --timeout 30 \
+            --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/service-role/RRR_DynamoDBFullAccess
 
           else
           echo "Layer already exists. Skipping deployment."
