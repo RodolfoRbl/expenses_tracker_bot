@@ -14,14 +14,11 @@ CATEGORIES = {
     "✈️ Travel": 9,
     "📚 Education": 10,
     "❓ Other": 11,
+    "💰 Income": 99,
 }
 
-HISTORY_WINDOWS = [
-    "Today",
-    "This Week",
-    "This Month",
-    "Last Month",
-]
+HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
+STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
 MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
 
@@ -32,21 +29,15 @@ def build_menu(buttons, n_cols=2):
 
 def get_category_keyboard():
     buttons = [
-        InlineKeyboardButton(cat, callback_data=f"cat_{cat.split()[-1]}") for cat in CATEGORIES
+        InlineKeyboardButton(cat, callback_data=f"cat_{cat.split()[-1]}")
+        for cat in CATEGORIES
+        if "Income" not in cat
     ]
     return build_menu(buttons, n_cols=3)
 
 
 def get_stats_keyboard():
-    periods = [
-        "Current Month",
-        "Last Month",
-        "Last 30 Days",
-        "Last 12 Months",
-        "All Time",
-        "Cancel",
-    ]
-    buttons = [InlineKeyboardButton(p, callback_data=f"stats_{p}") for p in periods]
+    buttons = [InlineKeyboardButton(p, callback_data=f"stats_{p}") for p in STATS_WINDOWS]
     return build_menu(buttons, n_cols=1)
 
 

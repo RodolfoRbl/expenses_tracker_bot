@@ -11,6 +11,7 @@ from .keyboards import (
 from .db import ExpenseDB
 from decimal import Decimal
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 
@@ -31,8 +32,8 @@ To record income, use a <b>+</b> sign:
 
 Here's what I can do for you:
 
-/stats 📊   View your spending stats
-/list 📋   See your full expense history
+/summary 📊   View your spending stats
+/history 📋   See your full expense history
 /delete ❌   Remove your last record
 /help 🆘   Full list of available commands
 
@@ -47,11 +48,11 @@ async def help_handler(update: Update, context: CallbackContext):
     help_text = """
 ⚙️ <b>Bot Commands</b>
 
-<b>/stats</b> 📊 – Show spending statistics
+<b>/summary</b> 📊 – Show spending statistics
 
 <b>/delete</b> ❌ – Remove your last record
 
-<b>/list</b> 📋 – Show all records
+<b>/history</b> 📋 – Show all records
 
 <b>/cancel</b> 🚫 – Cancel the current action
 
@@ -143,27 +144,41 @@ async def message_handler(update: Update, context: CallbackContext, db: ExpenseD
     user_id = str(update.effective_user.id)
 
     amount, description, is_income = await _parse_msg_to_elements(update, text)
-
+    _desc = f"<b>Description</b>: {description}" if description else ""
     if is_income is None:
         return
-    try:
-        _desc = f"<b>Description</b>: {description}" if description else ""
-        await update.message.reply_text(
-            f"<b>{'Income' if is_income else 'Expense'}</b>: ${amount:,.2f}\n{_desc}\n"
-            "Please select a category:",
-            parse_mode="HTML",
-            reply_markup=get_category_keyboard(),
-        )
-        db.state_table.put_item(
-            Item={
-                "user_id": user_id,
-                "pend_amt": Decimal(str(amount)),
-                "pend_desc": description,
-                "pend_inc": is_income,
-            }
-        )
-    except Exception as e:
-        await update.message.reply_text(f"Error recording expense: {str(e)}")
+    elif is_income:
+        try:
+            db.insert_expense(
+                user_id=user_id,
+                amount=amount,
+                category="99",  # Income category
+                currency="USD",
+                description=description,
+                income=is_income,
+            )
+            await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in Income")
+        except Exception as e:
+            await update.message.reply_text(f"Error inserting income: {str(e)}")
+            return
+    else:
+        try:
+            await update.message.reply_text(
+                f"<b>Expense</b>: ${amount:,.2f}\n{_desc}\n" "Please select a category:",
+                parse_mode="HTML",
+                reply_markup=get_category_keyboard(),
+            )
+
+            db.state_table.put_item(
+                Item={
+                    "user_id": user_id,
+                    "pend_amt": Decimal(str(amount)),
+                    "pend_desc": description,
+                    "pend_inc": is_income,
+                }
+            )
+        except Exception as e:
+            await update.message.reply_text(f"Error recording expense: {str(e)}")
 
 
 async def category_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
@@ -221,7 +236,7 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
         elif window == "This Month":
             start_date = today_dt.replace(day=1)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
-        elif window == "Last Month":
+        elif window == "Previous Month":
             first_of_month = today_dt.replace(day=1)
             start_date = (first_of_month - timedelta(days=1)).replace(day=1)
             last_day_dt = first_of_month - timedelta(days=1)
@@ -236,7 +251,7 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
 
         parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
         history = "\n".join(
-            f"{item['date']}: ${item['amount']:,.2f} - {parse_cat_id(item['category'])}"
+            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
             + (f" ({item['description']})" if item["description"] else "")
             for item in data
         )
@@ -248,6 +263,79 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
+async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
+    query = update.callback_query
+    await query.answer()
+    user_id = str(query.from_user.id)
+    stats_window = query.data[6:]
+    tz = db._parse_timezone("UTC-6")
+    today_dt = datetime.now(tz)
+    try:
+        if stats_window == "Today":
+            data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
+        elif stats_window == "This Week":
+            start_date = today_dt - timedelta(days=today_dt.weekday())
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif stats_window == "This Month":
+            start_date = today_dt.replace(day=1)
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif stats_window == "This Year":
+            start_date = today_dt.replace(month=1, day=1)
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif stats_window == "All Time":
+            start_date = today_dt.replace(year=1900)
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        else:
+            await query.edit_message_text(f"Invalid time window: {window}")
+            return
+
+        if not data:
+            await query.edit_message_text("No records found for the selected time window.")
+            return
+
+        category_totals = defaultdict(Decimal)
+        for item in data:
+            parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
+            cat_name = parse_cat_id(int(item["category"]))
+            category_totals[cat_name] += Decimal(item["amount"])
+
+        # Format the grouped data
+        spe_dict = {
+            category: total
+            for category, total in category_totals.items()
+            if "Income" not in category
+        }
+        inc_dict = {i: category_totals.get(i, 0) for i in ["💰 Income"]}
+        spending_total = sum(category_totals.values())
+        income_total = inc_dict.get("💰 Income", 0)
+        net = income_total - spending_total
+        sign = "- " if net < 0 else ""
+        await query.edit_message_text(
+            (
+                f"📊 <b>Stats for {stats_window}</b>:\n\n"
+                f"<b>➖ Expenses</b>\n\n{_format_agg_cats(spe_dict)}\n\n"
+                f"<b>➕ Income\n\n{_format_agg_cats(inc_dict)}</b>\n\n"
+                f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b>\n"
+                f"<b>Total Income: <code>${income_total:,.2f}</code></b>\n\n"
+                f"<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>"
+            ),
+            parse_mode="HTML",
+        )
+
+    except Exception as e:
+        await query.edit_message_text(f"Error fetching history: {str(e)}")
+
+
+def _format_agg_cats(data_dict: dict) -> str:
+    total = sum(data_dict.values())
+    sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+    formatted = [
+        f"<code>${amount:,.2f} ({int(amount / total * 100)}%)</code> - {category}"
+        for category, amount in sorted_data
+    ]
+    return "\n".join(formatted)
+
+
 async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     if query.data.startswith("cat_"):
@@ -255,7 +343,7 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
 
     elif query.data.startswith("stats_"):
         period = query.data[6:]
-        await query.edit_message_text(f"Stats for {period} (coming soon)")
+        await stats_callback_handler(update, period, db)
 
     elif query.data.startswith("hist_"):
         await history_callback_handler(update, context, db)
@@ -294,4 +382,10 @@ async def export_handler(update: Update, context: CallbackContext):
 async def budget_handler(update: Update, context: CallbackContext):
     await update.message.reply_text(
         "⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def unknown_command_handler(update, context):
+    await update.message.reply_text(
+        "Sorry, I didn't understand that command.\nTry /help for a list of commands."
     )

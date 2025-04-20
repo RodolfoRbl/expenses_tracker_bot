@@ -19,6 +19,7 @@ from utils.handlers import (
     categories_handler,
     export_handler,
     budget_handler,
+    unknown_command_handler,
 )
 
 from utils.db import ExpenseDB
@@ -39,7 +40,7 @@ def lambda_handler(event, context):
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("settings", settings_handler))
     app.add_handler(CommandHandler("subscription", subscription_handler))
-    app.add_handler(CommandHandler("stats", stats_handler))
+    app.add_handler(CommandHandler("summary", stats_handler))
     app.add_handler(CommandHandler("history", history_handler))
 
     # Premium commands
@@ -51,7 +52,7 @@ def lambda_handler(event, context):
     app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
     app.add_handler(MessageHandler(filters.Regex("^⚙️ Settings$"), settings_handler))
     app.add_handler(MessageHandler(filters.Regex("^⭐ Subscription$"), subscription_handler))
-    app.add_handler(MessageHandler(filters.Regex("^💹 Stats$"), stats_handler))
+    app.add_handler(MessageHandler(filters.Regex("^💹 Summary$"), stats_handler))
     app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler))
 
     # Pass the database instance to handlers
@@ -63,6 +64,9 @@ def lambda_handler(event, context):
 
     # General message for expenses
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl))
+
+    # Unknown commands
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
     # Start the bot
     print("Bot is running...")
