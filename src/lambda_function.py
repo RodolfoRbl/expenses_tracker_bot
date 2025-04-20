@@ -27,7 +27,7 @@ from utils.handlers import (
     delete_handler,
 )
 
-from utils.admin_handlers import empty_user_data, get_users_stats, broadcast
+from utils import admin_handlers as admn
 
 from utils.db import ExpenseDB
 
@@ -41,6 +41,12 @@ MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 # Initialize the application
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+
+def with_db(handler):
+    "Return the function object with the database instance"
+    return lambda u, c: handler(u, c, db)
+
+
 # Commands
 app.add_handler(CommandHandler("start", start_handler))
 app.add_handler(CommandHandler("help", help_handler))
@@ -49,27 +55,16 @@ app.add_handler(CommandHandler("subscription", subscription_handler))
 app.add_handler(CommandHandler("stats", stats_handler))
 app.add_handler(CommandHandler("history", history_handler))
 
-# Pass the database instance to handlers
-msg_hdl = lambda u, c: message_handler(u, c, db)
-cbk_hdl = lambda u, c: callback_handler(u, c, db)
-rmv_hdl = lambda u, c: delete_handler(u, c, db)
-exp_hdl = lambda u, c: export_handler(u, c, db)
-
-admin_empty_hdl = lambda u, c: empty_user_data(u, c, db)
-admin_users_stats = lambda u, c: get_users_stats(u, c, db)
-admin_broadcast = lambda u, c: broadcast(u, c, db)
-
 # Premium commands
 app.add_handler(CommandHandler("categories", categories_handler))
-app.add_handler(CommandHandler("export", exp_hdl))
 app.add_handler(CommandHandler("budget", budget_handler))
-app.add_handler(CommandHandler("delete", rmv_hdl))
+app.add_handler(CommandHandler("export", with_db(export_handler)))
+app.add_handler(CommandHandler("delete", with_db(delete_handler)))
 
 # Admin commands
-app.add_handler(CommandHandler("empty_user_data", admin_empty_hdl))
-app.add_handler(CommandHandler("users_stats", admin_users_stats))
-app.add_handler(CommandHandler("broadcast", admin_broadcast))
-
+app.add_handler(CommandHandler("empty_user_data", with_db(admn.empty_user_data)))
+app.add_handler(CommandHandler("users_stats", with_db(admn.get_users_stats)))
+app.add_handler(CommandHandler("broadcast", admn.broadcast))
 
 # Menu options
 app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
@@ -79,11 +74,10 @@ app.add_handler(MessageHandler(filters.Regex("^💹 Stats$"), stats_handler))
 app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler))
 
 # Callback queries
-app.add_handler(CallbackQueryHandler(cbk_hdl))
+app.add_handler(CallbackQueryHandler(with_db(callback_handler)))
 
 # General message for expenses
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl))
-
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, with_db(message_handler)))
 
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
