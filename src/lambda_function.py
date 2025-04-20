@@ -1,6 +1,7 @@
 import os
 import asyncio
 import json
+import threading
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -24,12 +25,12 @@ from utils.handlers import (
     export_handler,
     budget_handler,
     unknown_command_handler,
-    remove_handler,
+    delete_handler,
 )
 
 from utils.db import ExpenseDB
 
-# Initialize DB
+
 db = ExpenseDB(region_name="eu-central-1")
 
 # Load environment variables
@@ -57,7 +58,7 @@ app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler)
 # Pass the database instance to handlers
 msg_hdl = lambda u, c: message_handler(u, c, db)
 cbk_hdl = lambda u, c: callback_handler(u, c, db)
-rmv_hdl = lambda u, c: remove_handler(u, c, db)
+rmv_hdl = lambda u, c: delete_handler(u, c, db)
 
 # Callback queries
 app.add_handler(CallbackQueryHandler(cbk_hdl))
@@ -69,7 +70,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl))
 app.add_handler(CommandHandler("categories", categories_handler))
 app.add_handler(CommandHandler("export", export_handler))
 app.add_handler(CommandHandler("budget", budget_handler))
-app.add_handler(CommandHandler("remove", rmv_hdl))
+app.add_handler(CommandHandler("delete", rmv_hdl))
 
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))

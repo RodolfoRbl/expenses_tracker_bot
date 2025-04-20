@@ -6,7 +6,7 @@ from .keyboards import (
     get_stats_keyboard,
     get_history_keyboard,
     get_settings_keyboard,
-    get_remove_keyboard,
+    get_delete_keyboard,
     get_help_keyboard,
     get_subscription_keyboard,
     CATEGORIES,
@@ -89,7 +89,7 @@ Here's what I can do for you:
 
 /stats 📊   View your spending stats
 /history 📋   See your full expense history
-/remove ❌   Remove a recent record
+/delete ❌   Delete a recent record
 /help 🆘   Full list of available commands
 
 Let’s get your finances under control 🚀
@@ -105,7 +105,7 @@ async def help_handler(update: Update, context: CallbackContext):
 
 <b>/stats</b> 📊 – Show spending statistics
 
-<b>/remove</b> ❌ – Remove a recent record
+<b>/delete</b> ❌ – Delete a recent record
 
 <b>/history</b> 📋 – Show all records
 
@@ -170,7 +170,7 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
     )
 
 
-async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def delete_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     user_id = str(update.effective_user.id)
     try:
         # Fetch the last n records from the database
@@ -180,7 +180,7 @@ async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB
             10,
         )
         if not records:
-            await update.message.reply_text("No records found to remove.")
+            await update.message.reply_text("No records found to delete.")
             return
 
         emoji_map = {
@@ -203,9 +203,9 @@ async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB
         )
 
         await update.message.reply_text(
-            f"📋 <b>Last {n} Records:</b>\n\n{history}\n\nSelect a record to remove:",
+            f"📋 <b>Last {n} Records:</b>\n\n{history}\n\nSelect a record to delete:",
             parse_mode="HTML",
-            reply_markup=get_remove_keyboard(records),
+            reply_markup=get_delete_keyboard(records),
         )
     except Exception as e:
         await update.message.reply_text(f"Error fetching records: {str(e)}")
@@ -460,16 +460,16 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-async def remove_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def delete_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
-    if query.data == "remove_cancel":
+    if query.data == "delete_cancel":
         await query.edit_message_text("Cancelled record removal.")
         return
     try:
         db.remove_expense(user_id, query.data[7:])
-        await query.edit_message_text("✅ Record removed successfully.")
+        await query.edit_message_text("✅ Record deleted successfully.")
     except Exception as e:
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
@@ -506,8 +506,8 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
     elif query.data.startswith("hist_"):
         await history_callback_handler(update, context, db)
 
-    elif query.data.startswith("remove_"):
-        await remove_callback_handler(update, context, db)
+    elif query.data.startswith("delete_"):
+        await delete_callback_handler(update, context, db)
 
     elif query.data.startswith("help_premium"):
         await subscription_handler(update, context)

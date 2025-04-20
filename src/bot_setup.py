@@ -18,7 +18,7 @@ async def set_bot_commands():
         BotCommand("subscription", "💎 View premium benefits"),
         BotCommand("history", "📋 Show all records"),
         BotCommand("stats", "📊 Show spending statistics"),
-        BotCommand("remove", "❌ Remove your last record"),
+        BotCommand("delete", "❌ Delete a recent record"),
         BotCommand("settings", "⚙️ Update your profile/settings ⭐️"),
         BotCommand("categories", "🗂 Manage and add your own categories ⭐️"),
         BotCommand("export", "📁 Download your history (CSV) ⭐️"),

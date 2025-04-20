@@ -44,12 +44,12 @@ def get_subscription_keyboard():
     return build_menu(buttons, n_cols=1)
 
 
-def get_remove_keyboard(items):
+def get_delete_keyboard(items):
     buttons = [
-        InlineKeyboardButton(f"{i+1}", callback_data=f"remove_{item['timestamp']}")
+        InlineKeyboardButton(f"{i+1}", callback_data=f"delete{item['timestamp']}")
         for i, item in enumerate(items)
     ]
-    buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="remove_cancel"))
+    buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="delete_cancel"))
     return build_menu(buttons, n_cols=5)
 
 
