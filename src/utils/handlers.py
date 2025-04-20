@@ -89,7 +89,7 @@ Here's what I can do for you:
 
 /stats 📊   View your spending stats
 /history 📋   See your full expense history
-/delete ❌   Remove your last record
+/remove ❌   Remove a recent record
 /help 🆘   Full list of available commands
 
 Let’s get your finances under control 🚀
@@ -105,7 +105,7 @@ async def help_handler(update: Update, context: CallbackContext):
 
 <b>/stats</b> 📊 – Show spending statistics
 
-<b>/delete</b> ❌ – Remove your last record
+<b>/remove</b> ❌ – Remove a recent record
 
 <b>/history</b> 📋 – Show all records
 
@@ -183,8 +183,21 @@ async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB
             await update.message.reply_text("No records found to remove.")
             return
 
+        emoji_map = {
+            1: "1️⃣",
+            2: "2️⃣",
+            3: "3️⃣",
+            4: "4️⃣",
+            5: "5️⃣",
+            6: "6️⃣",
+            7: "7️⃣",
+            8: "8️⃣",
+            9: "9️⃣",
+            10: "🔟",
+        }
+
         history = "\n".join(
-            f"<b>{i + 1}</b>. {item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            f"<b>{emoji_map[i + 1]}</b>. {item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
             + (f" ({item['description']})" if item["description"] else "")
             for i, item in enumerate(records)
         )
