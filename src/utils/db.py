@@ -141,14 +141,27 @@ class ExpenseDB:
 
         return items
 
-    def fetch_latest_expenses(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def fetch_latest_expenses(
+        self, user_id: str, limit: int = 50, ascending=True
+    ) -> List[Dict[str, Any]]:
         """Fetch the most recent expenses for a user."""
         response = self.table.query(
             KeyConditionExpression=Key("user_id").eq(user_id),
-            ScanIndexForward=False,  # Sort in descending order
+            ScanIndexForward=ascending,  # Sort in descending order
             Limit=limit,
         )
         return response.get("Items", [])
+
+    def remove_expense(self, user_id: str, timestamp: str) -> bool:
+        """
+        Remove an expense record by user_id and timestamp.
+        """
+        try:
+            self.table.delete_item(Key={"user_id": user_id, "timestamp": timestamp})
+            return True
+        except Exception as e:
+            print(f"Error deleting item: {e}")
+            return False
 
     def summarize_by_category(self, expenses: List[Dict[str, Any]]) -> Dict[str, float]:
         summary = {}

@@ -20,6 +20,7 @@ from utils.handlers import (
     export_handler,
     budget_handler,
     unknown_command_handler,
+    remove_handler,
 )
 
 from utils.db import ExpenseDB
@@ -43,11 +44,6 @@ def lambda_handler(event, context):
     app.add_handler(CommandHandler("summary", stats_handler))
     app.add_handler(CommandHandler("history", history_handler))
 
-    # Premium commands
-    app.add_handler(CommandHandler("categories", categories_handler))
-    app.add_handler(CommandHandler("export", export_handler))
-    app.add_handler(CommandHandler("budget", budget_handler))
-
     # Menu options
     app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
     app.add_handler(MessageHandler(filters.Regex("^⚙️ Settings$"), settings_handler))
@@ -58,12 +54,19 @@ def lambda_handler(event, context):
     # Pass the database instance to handlers
     msg_hdl = lambda u, c: message_handler(u, c, db)
     cbk_hdl = lambda u, c: callback_handler(u, c, db)
+    rmv_hdl = lambda u, c: remove_handler(u, c, db)
 
     # Callback queries
     app.add_handler(CallbackQueryHandler(cbk_hdl))
 
     # General message for expenses
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl))
+
+    # Premium commands
+    app.add_handler(CommandHandler("categories", categories_handler))
+    app.add_handler(CommandHandler("export", export_handler))
+    app.add_handler(CommandHandler("budget", budget_handler))
+    app.add_handler(CommandHandler("remove", rmv_hdl))
 
     # Unknown commands
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))

@@ -6,6 +6,7 @@ from .keyboards import (
     get_stats_keyboard,
     get_history_keyboard,
     get_settings_keyboard,
+    get_remove_keyboard,
     CATEGORIES,
 )
 from .db import ExpenseDB
@@ -14,6 +15,58 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
+parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
+
+# ############################################
+# ######## AUXILIARY
+# ############################################
+
+
+def _format_agg_cats(data_dict: dict) -> str:
+    total = sum(data_dict.values())
+    sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+    formatted = [
+        f"<code>${amount:,.2f} ({int(amount / total * 100)}%)</code> - {category}"
+        for category, amount in sorted_data
+    ]
+    return "\n".join(formatted)
+
+
+async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
+    # Split the text into words
+    words = text.split()
+    is_last_digit = words[-1].lstrip("+-").replace(".", "", 1).isdigit()
+    is_first_digit = words[0].lstrip("+-").replace(".", "", 1).isdigit()
+    if len(words) == 1 and is_first_digit:
+        amount = float(words[0])
+        description = ""
+        is_income = "+" in words[0]
+    elif len(words) < 2:
+        await update.message.reply_text("Please use the format: amount description")
+        return [None] * 3
+    elif is_last_digit and is_first_digit:
+        await update.message.reply_text(
+            "Invalid format. Digits should be at the start or end, not both."
+        )
+        return [None] * 3
+    # Check if the first or last word is a valid amount
+    elif is_first_digit:
+        is_income = "+" in words[0]
+        amount = float(words[0])
+        description = " ".join(words[1:])
+    elif is_last_digit:
+        is_income = "+" in words[-1]
+        amount = float(words[-1])
+        description = " ".join(words[:-1])
+    else:
+        await update.message.reply_text("Please use the format: amount description")
+        return [None] * 3
+    return amount, description, is_income
+
+
+# ############################################
+# ######## COMMANDS
+# ############################################
 
 
 async def start_handler(update: Update, context: CallbackContext):
@@ -104,36 +157,79 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
     await update.message.reply_text(premium_text, parse_mode="HTML")
 
 
-async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
-    # Split the text into words
-    words = text.split()
-    is_last_digit = words[-1].lstrip("+-").replace(".", "", 1).isdigit()
-    is_first_digit = words[0].lstrip("+-").replace(".", "", 1).isdigit()
-    if len(words) == 1 and is_first_digit:
-        amount = float(words[0])
-        description = ""
-        is_income = "+" in words[0]
-    elif len(words) < 2:
-        await update.message.reply_text("Please use the format: amount description")
-        return [None] * 3
-    elif is_last_digit and is_first_digit:
-        await update.message.reply_text(
-            "Invalid format. Digits should be at the start or end, not both."
+async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    user_id = str(update.effective_user.id)
+    try:
+        # Fetch the last n records from the database
+        n = 5  # Number of records to fetch
+        records = db.fetch_latest_expenses(
+            user_id,
+            10,
         )
-        return [None] * 3
-    # Check if the first or last word is a valid amount
-    elif is_first_digit:
-        is_income = "+" in words[0]
-        amount = float(words[0])
-        description = " ".join(words[1:])
-    elif is_last_digit:
-        is_income = "+" in words[-1]
-        amount = float(words[-1])
-        description = " ".join(words[:-1])
-    else:
-        await update.message.reply_text("Please use the format: amount description")
-        return [None] * 3
-    return amount, description, is_income
+        if not records:
+            await update.message.reply_text("No records found to remove.")
+            return
+
+        history = "\n".join(
+            f"<b>{i + 1}</b>. {item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            + (f" ({item['description']})" if item["description"] else "")
+            for i, item in enumerate(records)
+        )
+
+        await update.message.reply_text(
+            f"📋 <b>Last {n} Records:</b>\n\n{history}\n\nSelect a record to remove:",
+            parse_mode="HTML",
+            reply_markup=get_remove_keyboard(records),
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Error fetching records: {str(e)}")
+
+
+async def stats_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text("Select time period:", reply_markup=get_stats_keyboard())
+
+
+async def history_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "Select time window for history:", reply_markup=get_history_keyboard()
+    )
+
+
+async def settings_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ <i>Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️",
+        parse_mode="HTML",
+        reply_markup=get_settings_keyboard(),
+    )
+
+
+async def categories_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def export_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Export command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def budget_handler(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+    )
+
+
+async def unknown_command_handler(update, context):
+    await update.message.reply_text(
+        "Sorry, I didn't understand that command.\nTry /help for a list of commands."
+    )
+
+
+# ############################################
+# ######## MESSAGES
+# ############################################
 
 
 async def message_handler(update: Update, context: CallbackContext, db: ExpenseDB):
@@ -181,11 +277,19 @@ async def message_handler(update: Update, context: CallbackContext, db: ExpenseD
             await update.message.reply_text(f"Error recording expense: {str(e)}")
 
 
+# ############################################
+# ######## CALLBACKS
+# ############################################
+
+
 async def category_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
     cat_name = query.data[4:]
+    if cat_name == "cancel":
+        await query.edit_message_text("Cancelled new record.")
+        return
     try:
         # Get the pending state from the database
         state = db.get_state(user_id)
@@ -227,6 +331,9 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
     window = query.data[5:]
     tz = db._parse_timezone("UTC-6")
     today_dt = datetime.now(tz)
+    if window == "cancel":
+        await query.edit_message_text("Cancelled history request.")
+        return
     try:
         if window == "Today":
             data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
@@ -249,7 +356,6 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
             await query.edit_message_text("No records found for the selected time window.")
             return
 
-        parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
         history = "\n".join(
             f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
             + (f" ({item['description']})" if item["description"] else "")
@@ -270,6 +376,9 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
     stats_window = query.data[6:]
     tz = db._parse_timezone("UTC-6")
     today_dt = datetime.now(tz)
+    if stats_window == "cancel":
+        await query.edit_message_text("Cancelled stats request.")
+        return
     try:
         if stats_window == "Today":
             data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
@@ -295,7 +404,6 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
 
         category_totals = defaultdict(Decimal)
         for item in data:
-            parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
             cat_name = parse_cat_id(int(item["category"]))
             category_totals[cat_name] += Decimal(item["amount"])
 
@@ -317,7 +425,7 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
                 f"<b>➕ Income\n\n{_format_agg_cats(inc_dict)}</b>\n\n"
                 f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b>\n"
                 f"<b>Total Income: <code>${income_total:,.2f}</code></b>\n\n"
-                f"<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>"
+                f"<b>Total Net:  <code>{sign}${abs(net):,.2f}</code></b>"
             ),
             parse_mode="HTML",
         )
@@ -326,14 +434,18 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-def _format_agg_cats(data_dict: dict) -> str:
-    total = sum(data_dict.values())
-    sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
-    formatted = [
-        f"<code>${amount:,.2f} ({int(amount / total * 100)}%)</code> - {category}"
-        for category, amount in sorted_data
-    ]
-    return "\n".join(formatted)
+async def remove_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    query = update.callback_query
+    await query.answer()
+    user_id = str(query.from_user.id)
+    if query.data == "remove_cancel":
+        await query.edit_message_text("Cancelled record removal.")
+        return
+    try:
+        db.remove_expense(user_id, query.data[7:])
+        await query.edit_message_text("✅ Record removed successfully.")
+    except Exception as e:
+        await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
 async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
@@ -348,44 +460,5 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
     elif query.data.startswith("hist_"):
         await history_callback_handler(update, context, db)
 
-
-async def stats_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text("Select time period:", reply_markup=get_stats_keyboard())
-
-
-async def history_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "Select time window for history:", reply_markup=get_history_keyboard()
-    )
-
-
-async def settings_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "⚠️ <i>Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️",
-        parse_mode="HTML",
-        reply_markup=get_settings_keyboard(),
-    )
-
-
-async def categories_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
-    )
-
-
-async def export_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "⚠️ Export command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
-    )
-
-
-async def budget_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
-    )
-
-
-async def unknown_command_handler(update, context):
-    await update.message.reply_text(
-        "Sorry, I didn't understand that command.\nTry /help for a list of commands."
-    )
+    elif query.data.startswith("remove_"):
+        await remove_callback_handler(update, context, db)
