@@ -1,7 +1,6 @@
 import os
 import asyncio
 import json
-import threading
 
 from telegram.ext import (
     ApplicationBuilder,

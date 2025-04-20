@@ -120,7 +120,11 @@ class ExpenseDB:
         self.table.put_item(Item=item)
 
     def fetch_expenses_by_user_and_date(
-        self, user_id: str, start_date: Union[str, date], end_date: Union[str, date]
+        self,
+        user_id: str,
+        start_date: Union[str, date],
+        end_date: Union[str, date],
+        ascending: bool = True,
     ) -> List[Dict[str, Any]]:
         # Ensure dates are in YYYY-MM-DD format
         if isinstance(start_date, date):
@@ -135,14 +139,13 @@ class ExpenseDB:
         )
         items = response.get("Items", [])
 
-        # Convert date strings back to date objects in the response
-        for item in items:
-            item["date"] = datetime.strptime(item["date"], "%Y-%m-%d").date()
+        # Sort items by timestamp
+        items.sort(key=lambda x: int(x["timestamp"]), reverse=not ascending)
 
         return items
 
     def fetch_latest_expenses(
-        self, user_id: str, limit: int = 50, ascending=True
+        self, user_id: str, limit: int = 50, ascending=False
     ) -> List[Dict[str, Any]]:
         """Fetch the most recent expenses for a user."""
         response = self.table.query(
@@ -150,7 +153,7 @@ class ExpenseDB:
             ScanIndexForward=ascending,  # Sort in descending order
             Limit=limit,
         )
-        return response.get("Items", [])
+        return list(reversed(response.get("Items", [])))
 
     def remove_expense(self, user_id: str, timestamp: str) -> bool:
         """
