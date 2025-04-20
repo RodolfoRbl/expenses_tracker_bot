@@ -7,6 +7,8 @@ from .keyboards import (
     get_history_keyboard,
     get_settings_keyboard,
     get_remove_keyboard,
+    get_help_keyboard,
+    get_subscription_keyboard,
     CATEGORIES,
 )
 from .db import ExpenseDB
@@ -126,6 +128,7 @@ async def help_handler(update: Update, context: CallbackContext):
 """
     await update.message.reply_text(
         help_text,
+        reply_markup=get_help_keyboard(),
         parse_mode="HTML",
     )
 
@@ -154,7 +157,17 @@ Specify a date range for your history. Example: <code>2024-01-15 2024-03-25</cod
 🧾 <b>Export</b>
 Download your data to <b>Excel/CSV</b> for backups or analysis.
 """
-    await update.message.reply_text(premium_text, parse_mode="HTML")
+    if update.callback_query:
+        await update.callback_query.answer()
+        func = update.callback_query.edit_message_text
+    else:
+        func = update.message.reply_text
+
+    await func(
+        premium_text,
+        reply_markup=get_subscription_keyboard(),
+        parse_mode="HTML",
+    )
 
 
 async def remove_handler(update: Update, context: CallbackContext, db: ExpenseDB):
@@ -448,6 +461,22 @@ async def remove_callback_handler(update: Update, context: CallbackContext, db: 
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
+async def subscription_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    query = update.callback_query
+    await query.answer()
+    if query.data == "subscribe_cancel":
+        await query.edit_message_text("Cancelled subscription request.")
+    else:
+        period = query.data.split("_")[-1]
+        await query.edit_message_text(f"Pending logic for handling {period} subscription actions.")
+
+
+async def help_callback_handler(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text("PRUEBA")
+
+
 async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
     query = update.callback_query
     if query.data.startswith("cat_"):
@@ -462,3 +491,9 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
 
     elif query.data.startswith("remove_"):
         await remove_callback_handler(update, context, db)
+
+    elif query.data.startswith("help_premium"):
+        await subscription_handler(update, context)
+
+    elif query.data.startswith("subscribe_"):
+        await subscription_callback_handler(update, context, db)

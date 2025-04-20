@@ -16,7 +16,6 @@ CATEGORIES = {
     "❓ Other": 11,
     "💰 Income": 99,
 }
-
 HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
 STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
@@ -25,6 +24,22 @@ MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscripti
 
 def build_menu(buttons, n_cols=2):
     return InlineKeyboardMarkup([buttons[i : i + n_cols] for i in range(0, len(buttons), n_cols)])
+
+
+def get_help_keyboard():
+    buttons = [InlineKeyboardButton("⭐ Premium", callback_data="help_premium")]
+    return build_menu(buttons, n_cols=1)
+
+
+def get_subscription_keyboard():
+    buttons = [
+        InlineKeyboardButton("1 Month - $3.99", callback_data="subscribe_1m"),
+        InlineKeyboardButton("3 Months - $9.99", callback_data="subscribe_3m"),
+        InlineKeyboardButton("6 Months - $19.99", callback_data="subscribe_6m"),
+        InlineKeyboardButton("12 Months - $29.99", callback_data="subscribe_12m"),
+        InlineKeyboardButton("Cancel", callback_data="subscribe_cancel"),
+    ]
+    return build_menu(buttons, n_cols=1)
 
 
 def get_remove_keyboard(items):
