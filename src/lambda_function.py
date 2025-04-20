@@ -47,6 +47,18 @@ app.add_handler(CommandHandler("subscription", subscription_handler))
 app.add_handler(CommandHandler("stats", stats_handler))
 app.add_handler(CommandHandler("history", history_handler))
 
+# Pass the database instance to handlers
+msg_hdl = lambda u, c: message_handler(u, c, db)
+cbk_hdl = lambda u, c: callback_handler(u, c, db)
+rmv_hdl = lambda u, c: delete_handler(u, c, db)
+exp_hdl = lambda u, c: export_handler(u, c, db)
+
+# Premium commands
+app.add_handler(CommandHandler("categories", categories_handler))
+app.add_handler(CommandHandler("export", exp_hdl))
+app.add_handler(CommandHandler("budget", budget_handler))
+app.add_handler(CommandHandler("delete", rmv_hdl))
+
 # Menu options
 app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
 app.add_handler(MessageHandler(filters.Regex("^⚙️ Settings$"), settings_handler))
@@ -54,22 +66,12 @@ app.add_handler(MessageHandler(filters.Regex("^⭐ Subscription$"), subscription
 app.add_handler(MessageHandler(filters.Regex("^💹 Stats$"), stats_handler))
 app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler))
 
-# Pass the database instance to handlers
-msg_hdl = lambda u, c: message_handler(u, c, db)
-cbk_hdl = lambda u, c: callback_handler(u, c, db)
-rmv_hdl = lambda u, c: delete_handler(u, c, db)
-
 # Callback queries
 app.add_handler(CallbackQueryHandler(cbk_hdl))
 
 # General message for expenses
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl))
 
-# Premium commands
-app.add_handler(CommandHandler("categories", categories_handler))
-app.add_handler(CommandHandler("export", export_handler))
-app.add_handler(CommandHandler("budget", budget_handler))
-app.add_handler(CommandHandler("delete", rmv_hdl))
 
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))

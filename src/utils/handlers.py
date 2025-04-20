@@ -15,6 +15,8 @@ from .db import ExpenseDB
 from decimal import Decimal
 from datetime import datetime, timedelta
 from collections import defaultdict
+import csv
+import io
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
@@ -223,7 +225,7 @@ async def history_handler(update: Update, context: CallbackContext):
 
 async def settings_handler(update: Update, context: CallbackContext):
     await update.message.reply_text(
-        "⚠️ <i>Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️",
+        "<i>⚠️ Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
         reply_markup=get_settings_keyboard(),
     )
@@ -231,19 +233,50 @@ async def settings_handler(update: Update, context: CallbackContext):
 
 async def categories_handler(update: Update, context: CallbackContext):
     await update.message.reply_text(
-        "⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+        "<i>⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
+        parse_mode="HTML",
     )
 
 
-async def export_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "⚠️ Export command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
-    )
+async def export_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+    user_id = str(update.effective_user.id)
+    try:
+        # Fetch all records for the user
+        records = db.fetch_expenses_by_user_and_date(user_id, "1950-01-01", "2100-12-31")
+        await update.message.reply_text("🟡 Exporting your data...")
+        if not records:
+            await update.message.reply_text("⚠️ No records found to export.")
+            return
+
+        # Create in memory CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow(["Date", "Amount", "Category", "Description", "Income"])
+        for record in records:
+            writer.writerow(
+                [
+                    record["date"],
+                    record["amount"],
+                    parse_cat_id(record["category"].split()[-1]),
+                    record.get("description", ""),
+                    "Yes" if record["income"] else "No",
+                ]
+            )
+        output.seek(0)
+        await update.message.reply_document(
+            document=io.BytesIO(output.getvalue().encode()),
+            filename="expenses.csv",
+            caption="✅ Your export is ready!",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Error exporting data: {str(e)}")
 
 
 async def budget_handler(update: Update, context: CallbackContext):
     await update.message.reply_text(
-        "⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️", parse_mode="HTML"
+        "<i>⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
+        parse_mode="HTML",
     )
 
 
