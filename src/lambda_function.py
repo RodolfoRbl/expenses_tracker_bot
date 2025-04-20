@@ -65,6 +65,7 @@ app.add_handler(CommandHandler("delete", with_db(delete_handler)))
 app.add_handler(CommandHandler("empty_user_data", with_db(admn.empty_user_data)))
 app.add_handler(CommandHandler("users_stats", with_db(admn.get_users_stats)))
 app.add_handler(CommandHandler("broadcast", admn.broadcast))
+app.add_handler(CommandHandler("admin", admn.admin_help))
 
 # Menu options
 app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))

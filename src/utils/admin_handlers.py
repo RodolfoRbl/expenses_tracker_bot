@@ -20,6 +20,23 @@ def admin_only(func):
 
 
 @admin_only
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Help for admins."""
+    msg = """
+📋 <b>Admin Commands Help</b>:
+
+<b>/empty_user_data</b> - Delete all records for yourself.
+
+<b>/users_stats</b> - Get usage stats for a given user or for all.
+
+<b>/broadcast</b> - Send a message to all bot users.
+
+<b>Note</b>: These commands are restricted to admin users only.
+"""
+    await update.message.reply_text(msg, parse_mode="HTML")
+
+
+@admin_only
 async def empty_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     """Delete all records for a specific user."""
     user_id = str(update.effective_user.id)
