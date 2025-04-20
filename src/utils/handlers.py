@@ -28,7 +28,7 @@ def _format_agg_cats(data_dict: dict) -> str:
     total = sum(data_dict.values())
     sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
     formatted = [
-        f"<code>${amount:,.2f} ({int(amount / total * 100)}%)</code> - {category}"
+        f"<code>${amount:,.2f} ({int(amount / total * 100) if total != 0 else 0}%)</code> - {category}"
         for category, amount in sorted_data
     ]
     return "\n".join(formatted)
