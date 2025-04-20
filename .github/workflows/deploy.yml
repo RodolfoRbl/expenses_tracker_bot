@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: eu-central-1
-  FUNCTION_NAME: ai_expenses_bot
+  FUNCTION_NAME: ai_expenses_bot_v2
   LAYER_NAME: telegram-bot-layer
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
           LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name ${{ env.LAYER_NAME }} \
           --zip-file fileb://layers/my_layer.zip \
-          --compatible-runtimes python3.9 \
+          --compatible-runtimes python3.9 python3.10 python3.11 \
           --query 'Version' \
           --output text)
 

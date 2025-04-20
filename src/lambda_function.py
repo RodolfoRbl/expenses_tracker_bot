@@ -34,9 +34,10 @@ db = ExpenseDB(region_name="eu-central-1")
 
 # Load environment variables
 load_dotenv(override=True)
-
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 # Initialize the application
-app = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 # Commands
 app.add_handler(CommandHandler("start", start_handler))
@@ -74,14 +75,27 @@ app.add_handler(CommandHandler("remove", rmv_hdl))
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
 
+def sm(m):
+    import requests
+
+    requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        json={"chat_id": MY_CHAT_ID, "text": m},
+    )
+
+
 async def main(event, context):
     try:
-        await app.initialize()
-        await app.process_update(Update.de_json(json.loads(event["body"]), app.bot))
-        return {"statusCode": 200, "body": "Success"}
+        async with app:
+            await app.process_update(Update.de_json(json.loads(event["body"]), app.bot))
     except Exception as e:
-        return {"statusCode": 500, "body": f"Failure {e}"}
+        sm(f"ERROR in main: {str(e)}")
+    return {"statusCode": 200, "body": "Success"}
 
 
 def lambda_handler(event, context):
-    return asyncio.get_event_loop().run_until_complete(main(event, context))
+    try:
+        asyncio.get_event_loop().run_until_complete(main(event, context))
+        return {"statusCode": 200, "body": "Success"}
+    except Exception as e:
+        sm(str(e))
