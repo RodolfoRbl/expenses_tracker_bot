@@ -461,7 +461,7 @@ async def remove_callback_handler(update: Update, context: CallbackContext, db: 
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
-async def subscription_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def subscription_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
     if query.data == "subscribe_cancel":
@@ -471,10 +471,14 @@ async def subscription_callback_handler(update: Update, context: CallbackContext
         await query.edit_message_text(f"Pending logic for handling {period} subscription actions.")
 
 
-async def help_callback_handler(update: Update, context: CallbackContext):
+async def settings_callback_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
-    await query.message.reply_text("PRUEBA")
+    if query.data == "settings_cancel":
+        await query.edit_message_text("Cancelled settings operation.")
+    else:
+        period = query.data.split("_")[-1]
+        await query.edit_message_text(f"Pending logic for handling {period} settings.")
 
 
 async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
@@ -496,4 +500,7 @@ async def callback_handler(update: Update, context: CallbackContext, db: Expense
         await subscription_handler(update, context)
 
     elif query.data.startswith("subscribe_"):
-        await subscription_callback_handler(update, context, db)
+        await subscription_callback_handler(update, context)
+
+    elif query.data.startswith("settings_"):
+        await settings_callback_handler(update, context)

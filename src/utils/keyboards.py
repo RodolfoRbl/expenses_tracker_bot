@@ -21,6 +21,8 @@ STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
 MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
 
+SETTINGS_OPTIONS = ["💵 Currency", "🌐 Language", "⏰ Timezone", "📂 Categories"]
+
 
 def build_menu(buttons, n_cols=2):
     return InlineKeyboardMarkup([buttons[i : i + n_cols] for i in range(0, len(buttons), n_cols)])
@@ -74,8 +76,10 @@ def get_history_keyboard():
 
 
 def get_settings_keyboard():
-    options = ["💵 Currency", "🌐 Language", "⏰ Timezone", "📂 Categories"]
-    buttons = [InlineKeyboardButton(opt, callback_data=f"settings_{opt}") for opt in options]
+    buttons = [
+        InlineKeyboardButton(opt, callback_data=f"settings_{opt.split('_')[-1]}")
+        for opt in SETTINGS_OPTIONS
+    ]
     buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="settings_cancel"))
     return build_menu(buttons, n_cols=2)
 
