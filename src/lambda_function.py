@@ -27,6 +27,8 @@ from utils.handlers import (
     delete_handler,
 )
 
+from utils.admin_handlers import empty_user_data, get_users_stats, broadcast
+
 from utils.db import ExpenseDB
 
 
@@ -53,11 +55,21 @@ cbk_hdl = lambda u, c: callback_handler(u, c, db)
 rmv_hdl = lambda u, c: delete_handler(u, c, db)
 exp_hdl = lambda u, c: export_handler(u, c, db)
 
+admin_empty_hdl = lambda u, c: empty_user_data(u, c, db)
+admin_users_stats = lambda u, c: get_users_stats(u, c, db)
+admin_broadcast = lambda u, c: broadcast(u, c, db)
+
 # Premium commands
 app.add_handler(CommandHandler("categories", categories_handler))
 app.add_handler(CommandHandler("export", exp_hdl))
 app.add_handler(CommandHandler("budget", budget_handler))
 app.add_handler(CommandHandler("delete", rmv_hdl))
+
+# Admin commands
+app.add_handler(CommandHandler("empty_user_data", admin_empty_hdl))
+app.add_handler(CommandHandler("users_stats", admin_users_stats))
+app.add_handler(CommandHandler("broadcast", admin_broadcast))
+
 
 # Menu options
 app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))

@@ -199,6 +199,16 @@ class ExpenseDB:
             print(f"Table '{self.table_name}' does not exist.")
             return False
 
+    def remove_batch_records(self, records: dict) -> bool:
+        """
+        Remove batch records
+        """
+        items = records
+        # Delete each record
+        with self.table.batch_writer() as batch:
+            for item in items:
+                batch.delete_item(Key={"user_id": item["user_id"], "timestamp": item["timestamp"]})
+
 
 if __name__ == "__main__":
     db = ExpenseDB(region_name="eu-central-1")
