@@ -430,7 +430,7 @@ async def category_callback_handler(
 
 
 async def history_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, window: str, db: ExpenseDB
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB, window: str
 ):
     query = update.callback_query
     await query.answer()
@@ -456,7 +456,7 @@ async def history_callback_handler(
             last_day_dt = first_of_month - timedelta(days=1)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, last_day_dt)
         elif window == "back":
-            await history_handler(update, context)
+            await history_handler(update, context, db)
             return
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
@@ -481,7 +481,10 @@ async def history_callback_handler(
 
 
 async def stats_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, window: str, db: ExpenseDB
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    db: ExpenseDB,
+    window: str,
 ):
     query = update.callback_query
     await query.answer()
@@ -508,7 +511,7 @@ async def stats_callback_handler(
             start_date = today_dt.replace(year=1900)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
         elif stats_window == "back":
-            await stats_handler(update, context)
+            await stats_handler(update, context, db)
             return
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
@@ -598,21 +601,21 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, d
 
     elif query.data.startswith("stats_"):
         period = query.data[6:]
-        await stats_callback_handler(update, context, period, db)
+        await stats_callback_handler(update, context, db, period)
 
     elif query.data.startswith("hist_"):
         window = query.data[5:]
-        await history_callback_handler(update, context, window, db)
+        await history_callback_handler(update, context, db, window)
 
     elif query.data.startswith("delete_"):
         await delete_callback_handler(update, context, db)
 
     elif query.data.startswith("help_premium"):
-        await subscription_handler(update, context)
+        await subscription_handler(update, context, db)
 
     elif query.data.startswith("subscribe_"):
-        await subscription_callback_handler(update, context)
+        await subscription_callback_handler(update, context, db)
 
     elif query.data.startswith("settings_"):
-        await settings_callback_handler(update, context)
+        await settings_callback_handler(update, context, db)
     log_activity(update, context, db)
