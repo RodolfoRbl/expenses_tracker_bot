@@ -13,7 +13,7 @@ async def set_bot_commands():
     app = Application.builder().token(BOT_TOKEN).build()
 
     commands = [
-        BotCommand("start", "Start the bot"),
+        BotCommand("start", "▶️ Start the bot"),
         BotCommand("help", "🆘 Show this help message"),
         BotCommand("subscription", "💎 View premium benefits"),
         BotCommand("history", "📋 Show all records"),
