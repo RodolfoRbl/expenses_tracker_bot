@@ -20,7 +20,7 @@ def admin_only(func):
 
 
 @admin_only
-async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     """Help for admins."""
     msg = """
 📋 <b>Admin Commands Help</b>:
@@ -73,6 +73,6 @@ async def get_users_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, db
 
 
 @admin_only
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     """Send a message to all bot users."""
     await update.message.reply_text("📣 Broadcasting logic to be implemented")
