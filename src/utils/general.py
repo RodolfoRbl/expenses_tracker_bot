@@ -1,7 +1,7 @@
 from datetime import timezone, timedelta, datetime
 
 
-def parse_timezone(timezone_str: str) -> timezone:
+def parse_timezone(timezone_str: str = "UTC-6") -> timezone:
     """
     Parse a timezone string (e.g., 'UTC-6' or 'UTC+3') into a timezone object.
     """
@@ -19,5 +19,5 @@ def parse_timezone(timezone_str: str) -> timezone:
         raise ValueError("Invalid timezone format. Use 'UTC±X'.")
 
 
-def get_str_timestamp(timezone="UTC-6"):
-    return str(int(datetime.now(parse_timezone(timezone)).timestamp()))
+def get_str_timestamp():
+    return str(int(datetime.now().timestamp()))

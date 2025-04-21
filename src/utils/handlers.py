@@ -313,9 +313,10 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
                 ]
             )
         output.seek(0)
+        file_dt = datetime.now(parse_timezone()).strftime("%Y_%m_%d")
         await update.message.reply_document(
             document=io.BytesIO(output.getvalue().encode()),
-            filename="expenses.csv",
+            filename=f"expenses_{file_dt}.csv",
             caption="✅ Your export is ready!",
         )
     except Exception as e:
