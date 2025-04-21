@@ -3,6 +3,7 @@ from boto3.dynamodb.conditions import Key
 from datetime import datetime, date, timezone, timedelta
 from decimal import Decimal
 from typing import List, Dict, Any, Union
+from uuid import uuid4
 
 
 class ExpenseDB:
@@ -10,8 +11,10 @@ class ExpenseDB:
         self.dynamodb = boto3.resource("dynamodb", region_name=region_name)
         self.table_name = "Expenses"
         self.user_states_table = "Telegram_bot_states"
+        self.users_table_name = "Users"
         self.table = self.dynamodb.Table(self.table_name)
         self.state_table = self.dynamodb.Table(self.user_states_table)
+        self.users_table = self.dynamodb.Table(self.users_table_name)
         self.region_name = region_name
 
     def create_table(self) -> None:
@@ -104,12 +107,13 @@ class ExpenseDB:
         # Parse the timezone string (e.g., "UTC-6" or "UTC+3")
         tz = self._parse_timezone(timezone)
         current_time = datetime.now(tz)
+        uid = str(uuid4())[:7]
         timestamp = str(int(current_time.timestamp()))
         date_str = current_time.strftime("%Y-%m-%d")
 
         item = {
             "user_id": user_id,
-            "timestamp": timestamp,
+            "timestamp": f"{timestamp}_{uid}",
             "date": date_str,
             "amount": Decimal(str(amount)),
             "category": category,
@@ -140,7 +144,7 @@ class ExpenseDB:
         items = response.get("Items", [])
 
         # Sort items by timestamp
-        items.sort(key=lambda x: int(x["timestamp"]), reverse=not ascending)
+        items.sort(key=lambda x: x["timestamp"], reverse=not ascending)
 
         return items
 
@@ -209,28 +213,35 @@ class ExpenseDB:
             for item in items:
                 batch.delete_item(Key={"user_id": item["user_id"], "timestamp": item["timestamp"]})
 
+    def create_users_table(self) -> None:
+        client = boto3.client("dynamodb", region_name=self.region_name)
+
+        existing_tables = client.list_tables()["TableNames"]
+        if self.users_table_name in existing_tables:
+            print(f"Table '{self.users_table_name}' already exists.")
+            return
+
+        table = self.dynamodb.create_table(
+            TableName=self.users_table_name,
+            KeySchema=[
+                {"AttributeName": "user_id", "KeyType": "HASH"},
+                {"AttributeName": "bot_id", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "user_id", "AttributeType": "S"},
+                {"AttributeName": "bot_id", "AttributeType": "S"},
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
+        )
+
+        table.wait_until_exists()
+        print(f"Table '{self.users_table_name}' created.")
+
 
 if __name__ == "__main__":
     db = ExpenseDB(region_name="eu-central-1")
 
-    # Create and populate table
+    # Create tables
     db.create_table()
     db.create_user_state_table()
-    # db.insert_expense(
-    #     user_id="123456",
-    #     amount=25.5,
-    #     category="groceries",
-    #     currency="USD",
-    #     description="Milk and eggs",
-    #     income=False,
-    # )
-
-    # # Query data
-    # start = date(2024, 1, 1)
-    # end = date(2025, 12, 31)
-    # records = db.fetch_expenses_by_user_and_date("123456", start, end)
-    # print("Fetched records:", records)
-    # print("Summary:", db.summarize_by_category(records))
-
-    # Delete table example (uncomment to use)
-    # db.delete_table()
+    db.create_users_table()
