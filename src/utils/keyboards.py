@@ -63,16 +63,24 @@ def get_category_keyboard():
     return build_menu(buttons, n_cols=3)
 
 
-def get_stats_keyboard():
-    buttons = [InlineKeyboardButton(p, callback_data=f"stats_{p}") for p in STATS_WINDOWS]
-    buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="stats_cancel"))
-    return build_menu(buttons, n_cols=1)
+def get_stats_keyboard(is_back_button=False):
+    if not is_back_button:
+        buttons = [InlineKeyboardButton(p, callback_data=f"stats_{p}") for p in STATS_WINDOWS]
+        buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="stats_cancel"))
+        return build_menu(buttons, n_cols=1)
+    else:
+        buttons = [InlineKeyboardButton("⬅️ Stats Menu", callback_data="stats_back")]
+        return build_menu(buttons, n_cols=1)
 
 
-def get_history_keyboard():
-    buttons = [InlineKeyboardButton(p, callback_data=f"hist_{p}") for p in HISTORY_WINDOWS]
-    buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="hist_cancel"))
-    return build_menu(buttons, n_cols=1)
+def get_history_keyboard(is_back_button=False):
+    if not is_back_button:
+        buttons = [InlineKeyboardButton(p, callback_data=f"hist_{p}") for p in HISTORY_WINDOWS]
+        buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="hist_cancel"))
+        return build_menu(buttons, n_cols=1)
+    else:
+        buttons = [InlineKeyboardButton("⬅️ History Menu", callback_data="hist_back")]
+        return build_menu(buttons, n_cols=1)
 
 
 def get_settings_keyboard():

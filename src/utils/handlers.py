@@ -107,9 +107,7 @@ Let’s get your finances under control 🚀
     # Check if the user and bot already exist in the table
     existing_user = db.users_table.get_item(Key={"user_id": user_id, "bot_id": bot_id}).get("Item")
 
-    if existing_user:
-        db.add_activity(user_id, bot_id)
-    else:
+    if not existing_user:
         curr_time = get_str_timestamp()
         db.users_table.put_item(
             Item={
@@ -208,12 +206,9 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     user_id = str(update.effective_user.id)
     try:
-        # Fetch the last n records from the database
-        n = 5  # Number of records to fetch
-        records = db.fetch_latest_expenses(
-            user_id,
-            10,
-        )
+        # Fetch last n
+        n = 10
+        records = db.fetch_latest_expenses(user_id, n)
         if not records:
             await update.message.reply_text("No records found to delete.")
             return
@@ -418,7 +413,9 @@ async def category_callback_handler(
         return
 
 
-async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
+async def history_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, window: str, db: ExpenseDB
+):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
@@ -442,6 +439,9 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
             start_date = (first_of_month - timedelta(days=1)).replace(day=1)
             last_day_dt = first_of_month - timedelta(days=1)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, last_day_dt)
+        elif window == "back":
+            await history_handler(update, context)
+            return
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
             return
@@ -458,12 +458,15 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
         await query.edit_message_text(
             f"📅 <b>History for {window}</b>:\n\n{history}",
             parse_mode="HTML",
+            reply_markup=get_history_keyboard(is_back_button=True),
         )
     except Exception as e:
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
+async def stats_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, window: str, db: ExpenseDB
+):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
@@ -488,6 +491,9 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
         elif stats_window == "All Time":
             start_date = today_dt.replace(year=1900)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
+        elif stats_window == "back":
+            await stats_handler(update, context)
+            return
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
             return
@@ -522,6 +528,7 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
                 f"<b>Total Net:  <code>{sign}${abs(net):,.2f}</code></b>"
             ),
             parse_mode="HTML",
+            reply_markup=get_stats_keyboard(is_back_button=True),
         )
 
     except Exception as e:
@@ -571,10 +578,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, d
 
     elif query.data.startswith("stats_"):
         period = query.data[6:]
-        await stats_callback_handler(update, period, db)
+        await stats_callback_handler(update, context, period, db)
 
     elif query.data.startswith("hist_"):
-        await history_callback_handler(update, context, db)
+        window = query.data[5:]
+        await history_callback_handler(update, context, window, db)
 
     elif query.data.startswith("delete_"):
         await delete_callback_handler(update, context, db)

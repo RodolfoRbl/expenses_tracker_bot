@@ -4,7 +4,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from typing import List, Dict, Any, Union
 from uuid import uuid4
-from .general import parse_timezone
+from .general import parse_timezone, get_str_timestamp
 
 
 class ExpenseDB:
@@ -228,7 +228,7 @@ class ExpenseDB:
             ExpressionAttributeValues={
                 ":inc": 1,
                 ":start": 0,
-                ":now": str(datetime.now(parse_timezone("UTC-6")).timestamp()),
+                ":now": get_str_timestamp(),
             },
         )
 

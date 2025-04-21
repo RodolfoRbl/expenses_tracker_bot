@@ -28,17 +28,14 @@ from utils.handlers import (
 )
 
 from utils import admin_handlers as admn
-
 from utils.db import ExpenseDB
-
 
 db = ExpenseDB(region_name="eu-central-1")
 
-# Load environment variables
 load_dotenv(override=True)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
-# Initialize the application
+
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 
@@ -82,6 +79,11 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, with_db(message_
 
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
+
+# Always executed
+app.add_handler(
+    MessageHandler(filters.ALL, lambda u, c: db.add_activity(str(u.effective_user.id), c.bot.id))
+)
 
 
 def sm(m):
