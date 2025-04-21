@@ -82,7 +82,9 @@ app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
 # Always executed
 app.add_handler(
-    MessageHandler(filters.ALL, lambda u, c: db.add_activity(str(u.effective_user.id), c.bot.id))
+    MessageHandler(
+        filters.ALL, lambda u, c: db.add_activity(str(u.effective_user.id), str(c.bot.id))
+    )
 )
 
 

@@ -242,13 +242,21 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
 
 
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Select time period:", reply_markup=get_stats_keyboard())
+    if update.callback_query:
+        await update.callback_query.answer()
+        func = update.callback_query.edit_message_text
+    else:
+        func = update.message.reply_text
+    await func("Select time period:", reply_markup=get_stats_keyboard())
 
 
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Select time window for history:", reply_markup=get_history_keyboard()
-    )
+    if update.callback_query:
+        await update.callback_query.answer()
+        func = update.callback_query.edit_message_text
+    else:
+        func = update.message.reply_text
+    await func("Select time window for history:", reply_markup=get_history_keyboard())
 
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
