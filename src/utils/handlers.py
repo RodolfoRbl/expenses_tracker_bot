@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import CallbackContext
+from telegram.ext import ContextTypes
 from .keyboards import (
     get_start_keyboard,
     get_category_keyboard,
@@ -12,6 +12,7 @@ from .keyboards import (
     CATEGORIES,
 )
 from .db import ExpenseDB
+from .general import parse_timezone, get_str_timestamp
 from decimal import Decimal
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -73,7 +74,7 @@ async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
 # ############################################
 
 
-async def start_handler(update: Update, context: CallbackContext):
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     await update.message.reply_text(
         """
 Hey, I'm <b>Fundu</b>! 👋🏼
@@ -100,8 +101,40 @@ Let’s get your finances under control 🚀
         reply_markup=get_start_keyboard(),
     )
 
+    user_id = str(update.effective_user.id)
+    bot_id = str(context.bot.id)
 
-async def help_handler(update: Update, context: CallbackContext):
+    # Check if the user and bot already exist in the table
+    existing_user = db.users_table.get_item(Key={"user_id": user_id, "bot_id": bot_id}).get("Item")
+
+    if existing_user:
+        db.add_activity(user_id, bot_id)
+    else:
+        curr_time = get_str_timestamp()
+        db.users_table.put_item(
+            Item={
+                "user_id": user_id,
+                "bot_id": bot_id,
+                "username": update.effective_user.username or "",
+                "first_name": update.effective_user.first_name or "",
+                "language_code": update.effective_user.language_code or "",
+                "is_premium": False,
+                "joined_at": curr_time,
+                "last_active": curr_time,
+                "total_requests": 1,
+                "custom_data": {
+                    "timezone": "UTC-6",
+                    "categories": {},
+                    "lang": "EN",
+                    "budget": 0,
+                    "currency": "USD",
+                },
+                "temp": {},
+            }
+        )
+
+
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """
 ⚙️ <b>Bot Commands</b>
 
@@ -135,7 +168,7 @@ async def help_handler(update: Update, context: CallbackContext):
     )
 
 
-async def subscription_handler(update: Update, context: CallbackContext):
+async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     premium_text = """
 ⚪️ <b>Subscription is inactive</b>
 
@@ -172,7 +205,7 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
     )
 
 
-async def delete_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     user_id = str(update.effective_user.id)
     try:
         # Fetch the last n records from the database
@@ -213,17 +246,17 @@ async def delete_handler(update: Update, context: CallbackContext, db: ExpenseDB
         await update.message.reply_text(f"Error fetching records: {str(e)}")
 
 
-async def stats_handler(update: Update, context: CallbackContext):
+async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Select time period:", reply_markup=get_stats_keyboard())
 
 
-async def history_handler(update: Update, context: CallbackContext):
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Select time window for history:", reply_markup=get_history_keyboard()
     )
 
 
-async def settings_handler(update: Update, context: CallbackContext):
+async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
@@ -231,14 +264,14 @@ async def settings_handler(update: Update, context: CallbackContext):
     )
 
 
-async def categories_handler(update: Update, context: CallbackContext):
+async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
     )
 
 
-async def export_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     user_id = str(update.effective_user.id)
     try:
         # Fetch all records for the user
@@ -273,7 +306,7 @@ async def export_handler(update: Update, context: CallbackContext, db: ExpenseDB
         await update.message.reply_text(f"Error exporting data: {str(e)}")
 
 
-async def budget_handler(update: Update, context: CallbackContext):
+async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
@@ -291,7 +324,7 @@ async def unknown_command_handler(update, context):
 # ############################################
 
 
-async def message_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     text = update.message.text.strip()
     if len(text) >= 100:
         await update.message.reply_text("Message too long. Please keep it under 100 characters.")
@@ -341,7 +374,9 @@ async def message_handler(update: Update, context: CallbackContext, db: ExpenseD
 # ############################################
 
 
-async def category_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def category_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
+):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
@@ -388,7 +423,7 @@ async def history_callback_handler(update: Update, window: str, db: ExpenseDB):
     await query.answer()
     user_id = str(query.from_user.id)
     window = query.data[5:]
-    tz = db._parse_timezone("UTC-6")
+    tz = parse_timezone("UTC-6")
     today_dt = datetime.now(tz)
     if window == "cancel":
         await query.edit_message_text("Cancelled history request.")
@@ -433,7 +468,7 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
     await query.answer()
     user_id = str(query.from_user.id)
     stats_window = query.data[6:]
-    tz = db._parse_timezone("UTC-6")
+    tz = parse_timezone("UTC-6")
     today_dt = datetime.now(tz)
     if stats_window == "cancel":
         await query.edit_message_text("Cancelled stats request.")
@@ -493,7 +528,9 @@ async def stats_callback_handler(update: Update, window: str, db: ExpenseDB):
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-async def delete_callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def delete_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
+):
     query = update.callback_query
     await query.answer()
     user_id = str(query.from_user.id)
@@ -507,7 +544,7 @@ async def delete_callback_handler(update: Update, context: CallbackContext, db: 
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
-async def subscription_callback_handler(update: Update, context: CallbackContext):
+async def subscription_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     if query.data == "subscribe_cancel":
@@ -517,7 +554,7 @@ async def subscription_callback_handler(update: Update, context: CallbackContext
         await query.edit_message_text(f"Pending logic for handling {period} subscription actions.")
 
 
-async def settings_callback_handler(update: Update, context: CallbackContext):
+async def settings_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     if query.data == "settings_cancel":
@@ -527,7 +564,7 @@ async def settings_callback_handler(update: Update, context: CallbackContext):
         await query.edit_message_text(f"Pending logic for handling {period} settings.")
 
 
-async def callback_handler(update: Update, context: CallbackContext, db: ExpenseDB):
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     query = update.callback_query
     if query.data.startswith("cat_"):
         await category_callback_handler(update, context, db)

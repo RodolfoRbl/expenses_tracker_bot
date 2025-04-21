@@ -1,9 +1,10 @@
 import boto3
 from boto3.dynamodb.conditions import Key
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, date
 from decimal import Decimal
 from typing import List, Dict, Any, Union
 from uuid import uuid4
+from .general import parse_timezone
 
 
 class ExpenseDB:
@@ -76,23 +77,6 @@ class ExpenseDB:
         response = self.state_table.get_item(Key={"user_id": user_id})
         return response.get("Item", {})
 
-    def _parse_timezone(self, timezone_str: str) -> timezone:
-        """
-        Parse a timezone string (e.g., 'UTC-6' or 'UTC+3') into a timezone object.
-        """
-        if timezone_str.startswith("UTC"):
-            sign = timezone_str[3]
-            offset_hours = int(timezone_str[4:])
-            if sign == "-":
-                offset = timedelta(hours=-offset_hours)
-            elif sign == "+":
-                offset = timedelta(hours=offset_hours)
-            else:
-                raise ValueError("Invalid timezone format. Use 'UTC±X'.")
-            return timezone(offset)
-        else:
-            raise ValueError("Invalid timezone format. Use 'UTC±X'.")
-
     def insert_expense(
         self,
         user_id: str,
@@ -105,7 +89,7 @@ class ExpenseDB:
     ) -> None:
 
         # Parse the timezone string (e.g., "UTC-6" or "UTC+3")
-        tz = self._parse_timezone(timezone)
+        tz = parse_timezone(timezone)
         current_time = datetime.now(tz)
         uid = str(uuid4())[:7]
         timestamp = str(int(current_time.timestamp()))
@@ -236,6 +220,17 @@ class ExpenseDB:
 
         table.wait_until_exists()
         print(f"Table '{self.users_table_name}' created.")
+
+    def add_activity(self, user_id: str, bot_id: str) -> None:
+        self.users_table.update_item(
+            Key={"user_id": user_id, "bot_id": bot_id},
+            UpdateExpression="SET total_requests = if_not_exists(total_requests, :start) + :inc, last_active = :now",
+            ExpressionAttributeValues={
+                ":inc": 1,
+                ":start": 0,
+                ":now": str(datetime.now(parse_timezone("UTC-6")).timestamp()),
+            },
+        )
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ def with_db(handler):
 
 
 # Commands
-app.add_handler(CommandHandler("start", start_handler))
+app.add_handler(CommandHandler("start", with_db(start_handler)))
 app.add_handler(CommandHandler("help", help_handler))
 app.add_handler(CommandHandler("settings", settings_handler))
 app.add_handler(CommandHandler("subscription", subscription_handler))
