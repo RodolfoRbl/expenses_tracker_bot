@@ -69,9 +69,6 @@ async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
     return amount, description, is_income
 
 
-# Updates user metadata table
-log_activity = lambda u, c, db: db.add_activity(str(u.effective_user.id), str(c.bot.id))
-
 # ############################################
 # ######## COMMANDS
 # ############################################
@@ -133,7 +130,6 @@ Let’s get your finances under control 🚀
                 "temp": {},
             }
         )
-    log_activity(update, context, db)
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -168,7 +164,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: E
         reply_markup=get_help_keyboard(),
         parse_mode="HTML",
     )
-    log_activity(update, context, db)
 
 
 async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -206,9 +201,6 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
         reply_markup=get_subscription_keyboard(),
         parse_mode="HTML",
     )
-    if not update.callback_query:
-        # The activity is handled in other func
-        log_activity(update, context, db)
 
 
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -219,7 +211,6 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         records = db.fetch_latest_expenses(user_id, n)
         if not records:
             await update.message.reply_text("No records found to delete.")
-            log_activity(update, context, db)
             return
 
         emoji_map = {
@@ -248,7 +239,6 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         )
     except Exception as e:
         await update.message.reply_text(f"Error fetching records: {str(e)}")
-    log_activity(update, context, db)
 
 
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -258,9 +248,6 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: 
     else:
         func = update.message.reply_text
     await func("Select time period:", reply_markup=get_stats_keyboard())
-    if not update.callback_query:
-        # The activity is handled in other func
-        log_activity(update, context, db)
 
 
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -270,9 +257,6 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
     else:
         func = update.message.reply_text
     await func("Select time window for history:", reply_markup=get_history_keyboard())
-    if not update.callback_query:
-        # The activity is handled in other func
-        log_activity(update, context, db)
 
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -281,7 +265,6 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, d
         parse_mode="HTML",
         reply_markup=get_settings_keyboard(),
     )
-    log_activity(update, context, db)
 
 
 async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -289,7 +272,6 @@ async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE,
         "<i>⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
     )
-    log_activity(update, context, db)
 
 
 async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -300,7 +282,6 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         await update.message.reply_text("🟡 Exporting your data...")
         if not records:
             await update.message.reply_text("⚠️ No records found to export.")
-            log_activity(update, context, db)
             return
 
         # Create in memory CSV
@@ -327,7 +308,6 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         )
     except Exception as e:
         await update.message.reply_text(f"Error exporting data: {str(e)}")
-    log_activity(update, context, db)
 
 
 async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -335,14 +315,12 @@ async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         "<i>⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
     )
-    log_activity(update, context, db)
 
 
 async def unknown_command_handler(update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     await update.message.reply_text(
         "Sorry, I didn't understand that command.\nTry /help for a list of commands."
     )
-    log_activity(update, context, db)
 
 
 # ############################################
@@ -354,7 +332,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
     text = update.message.text.strip()
     if len(text) >= 100:
         await update.message.reply_text("Message too long. Please keep it under 100 characters.")
-        log_activity(update, context, db)
         return
     user_id = str(update.effective_user.id)
 
@@ -393,7 +370,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
             )
         except Exception as e:
             await update.message.reply_text(f"Error recording expense: {str(e)}")
-    log_activity(update, context, db)
 
 
 # ############################################
@@ -625,4 +601,3 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, d
 
     elif query.data.startswith("settings_"):
         await settings_callback_handler(update, context, db)
-    log_activity(update, context, db)

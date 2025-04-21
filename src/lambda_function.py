@@ -98,7 +98,9 @@ def sm(m):
 async def main(event, context):
     try:
         async with app:
-            await app.process_update(Update.de_json(json.loads(event["body"]), app.bot))
+            update = Update.de_json(json.loads(event["body"]), app.bot)
+            await app.process_update(update)
+            db.add_activity(str(update.effective_user.id), str(app.bot.id))
     except Exception as e:
         sm(f"ERROR in main: {str(e)}")
     return {"statusCode": 200, "body": "Success"}
