@@ -206,7 +206,9 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
         reply_markup=get_subscription_keyboard(),
         parse_mode="HTML",
     )
-    log_activity(update, context, db)
+    if not update.callback_query:
+        # The activity is handled in other func
+        log_activity(update, context, db)
 
 
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -256,7 +258,9 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: 
     else:
         func = update.message.reply_text
     await func("Select time period:", reply_markup=get_stats_keyboard())
-    log_activity(update, context, db)
+    if not update.callback_query:
+        # The activity is handled in other func
+        log_activity(update, context, db)
 
 
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
@@ -266,7 +270,9 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
     else:
         func = update.message.reply_text
     await func("Select time window for history:", reply_markup=get_history_keyboard())
-    log_activity(update, context, db)
+    if not update.callback_query:
+        # The activity is handled in other func
+        log_activity(update, context, db)
 
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
