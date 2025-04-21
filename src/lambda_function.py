@@ -45,31 +45,36 @@ def with_db(handler):
 
 
 # Commands
-app.add_handler(CommandHandler("start", with_db(start_handler)))
-app.add_handler(CommandHandler("help", help_handler))
-app.add_handler(CommandHandler("settings", settings_handler))
-app.add_handler(CommandHandler("subscription", subscription_handler))
-app.add_handler(CommandHandler("stats", stats_handler))
-app.add_handler(CommandHandler("history", history_handler))
+for cmd, handler in [
+    ("start", start_handler),
+    ("help", help_handler),
+    ("settings", settings_handler),
+    ("subscription", subscription_handler),
+    ("stats", stats_handler),
+    ("history", history_handler),
+    # Premium
+    ("categories", categories_handler),
+    ("budget", budget_handler),
+    ("export", export_handler),
+    ("delete", delete_handler),
+    # Admin
+    ("empty_user_data", admn.empty_user_data),
+    ("users_stats", admn.get_users_stats),
+    ("broadcast", admn.broadcast),
+    ("admin", admn.admin_help),
+]:
+    app.add_handler(CommandHandler(cmd, with_db(handler)))
 
-# Premium commands
-app.add_handler(CommandHandler("categories", categories_handler))
-app.add_handler(CommandHandler("budget", budget_handler))
-app.add_handler(CommandHandler("export", with_db(export_handler)))
-app.add_handler(CommandHandler("delete", with_db(delete_handler)))
 
-# Admin commands
-app.add_handler(CommandHandler("empty_user_data", with_db(admn.empty_user_data)))
-app.add_handler(CommandHandler("users_stats", with_db(admn.get_users_stats)))
-app.add_handler(CommandHandler("broadcast", admn.broadcast))
-app.add_handler(CommandHandler("admin", admn.admin_help))
-
-# Menu options
-app.add_handler(MessageHandler(filters.Regex("^❓ Help$"), help_handler))
-app.add_handler(MessageHandler(filters.Regex("^⚙️ Settings$"), settings_handler))
-app.add_handler(MessageHandler(filters.Regex("^⭐ Subscription$"), subscription_handler))
-app.add_handler(MessageHandler(filters.Regex("^💹 Stats$"), stats_handler))
-app.add_handler(MessageHandler(filters.Regex("^📆 History$"), history_handler))
+# Menu Messages
+for pattern, handler in [
+    ("^❓ Help$", help_handler),
+    ("^⚙️ Settings$", settings_handler),
+    ("^⭐ Subscription$", subscription_handler),
+    ("^💹 Stats$", stats_handler),
+    ("^📆 History$", history_handler),
+]:
+    app.add_handler(MessageHandler(filters.Regex(pattern), with_db(handler)))
 
 # Callback queries
 app.add_handler(CallbackQueryHandler(with_db(callback_handler)))
@@ -78,14 +83,7 @@ app.add_handler(CallbackQueryHandler(with_db(callback_handler)))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, with_db(message_handler)))
 
 # Unknown commands
-app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
-
-# Always executed
-app.add_handler(
-    MessageHandler(
-        filters.ALL, lambda u, c: db.add_activity(str(u.effective_user.id), str(c.bot.id))
-    )
-)
+app.add_handler(MessageHandler(filters.COMMAND, with_db(unknown_command_handler)))
 
 
 def sm(m):
