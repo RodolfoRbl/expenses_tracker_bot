@@ -9,6 +9,8 @@ env:
   AWS_REGION: eu-central-1
   FUNCTION_NAME: ai_expenses_bot_v2
   LAYER_NAME: telegram-bot-layer
+  TIMEOUT: 10
+  MEMORY_SIZE: 256
 
 jobs:
   build-layer:
@@ -60,7 +62,8 @@ jobs:
             --function-name ${{ env.FUNCTION_NAME }} \
             --layers $LAYER_ARN \
             --handler lambda_function.lambda_handler \
-            --timeout 30 \
+            --timeout ${{ env.TIMEOUT }} \
+            --memory-size ${{ env.MEMORY_SIZE }} \
             --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/service-role/RRR_DynamoDBFullAccess
 
           else
