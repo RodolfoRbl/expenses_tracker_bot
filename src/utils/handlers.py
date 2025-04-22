@@ -550,6 +550,9 @@ async def stats_callback_handler(
             cat_name = parse_cat_id(int(item["category"]))
             category_totals[cat_name] += Decimal(item["amount"])
 
+        n_spend = sum([1 for i in data if int(i["category"]) != 99])
+        n_inc = len(data) - n_spend
+
         # Format the grouped data
         spe_dict = {
             category: total
@@ -566,8 +569,8 @@ async def stats_callback_handler(
                 f"📊 <b>Stats for {stats_window}</b>:\n\n"
                 f"<b>➖ Expenses</b>\n\n{_format_agg_cats(spe_dict)}\n\n"
                 f"<b>➕ Income\n\n{_format_agg_cats(inc_dict)}</b>\n\n"
-                f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b>\n"
-                f"<b>Total Income: <code>${income_total:,.2f}</code></b>\n\n"
+                f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b> ({n_spend})\n"
+                f"<b>Total Income: <code>${income_total:,.2f}</code></b>  ({n_inc})\n\n"
                 f"<b>Total Net:  <code>{sign}${abs(net):,.2f}</code></b>"
             ),
             parse_mode="HTML",

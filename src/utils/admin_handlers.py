@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 from .db import ExpenseDB
 
 ADMINS = {int(x.strip()) for x in os.getenv("ADMINS", "").split(",") if x.strip().isdigit()}
+MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 
 
 def admin_only(func):
@@ -54,7 +55,10 @@ async def get_users_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, db
     args = context.args
     try:
         if args:
-            user_id = str(args[0])
+            if args[0] != "me":
+                user_id = str(args[0])
+            else:
+                user_id = str(MY_CHAT_ID)
             records = db.fetch_expenses_by_user_and_date(user_id, "1900-01-01", "2100-12-31")
             msg = f"📊 Stats for user {user_id}:\n"
             msg += f"Total records: {len(records)}\n"
