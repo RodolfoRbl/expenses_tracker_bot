@@ -191,7 +191,6 @@ Specify a date range for your history. Example: <code>2024-01-15 2024-03-25</cod
 Download your data to <b>Excel/CSV</b> for backups or analysis.
 """
     if update.callback_query:
-        await update.callback_query.answer()
         func = update.callback_query.edit_message_text
     else:
         func = update.message.reply_text
@@ -243,7 +242,6 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
 
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     if update.callback_query:
-        await update.callback_query.answer()
         func = update.callback_query.edit_message_text
     else:
         func = update.message.reply_text
@@ -252,7 +250,6 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: 
 
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     if update.callback_query:
-        await update.callback_query.answer()
         func = update.callback_query.edit_message_text
     else:
         func = update.message.reply_text
@@ -381,7 +378,6 @@ async def category_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
 ):
     query = update.callback_query
-    await query.answer()
     user_id = str(query.from_user.id)
     cat_name = query.data[4:]
     if cat_name == "cancel":
@@ -416,7 +412,6 @@ async def history_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB, window: str
 ):
     query = update.callback_query
-    await query.answer()
     user_id = str(query.from_user.id)
     window = query.data[5:]
     tz = parse_timezone("UTC-6")
@@ -470,7 +465,6 @@ async def stats_callback_handler(
     window: str,
 ):
     query = update.callback_query
-    await query.answer()
     user_id = str(query.from_user.id)
     stats_window = query.data[6:]
     tz = parse_timezone("UTC-6")
@@ -541,7 +535,6 @@ async def delete_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
 ):
     query = update.callback_query
-    await query.answer()
     user_id = str(query.from_user.id)
     if query.data == "delete_cancel":
         await query.edit_message_text("Cancelled record removal.")
@@ -557,7 +550,6 @@ async def subscription_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
 ):
     query = update.callback_query
-    await query.answer()
     if query.data == "subscribe_cancel":
         await query.edit_message_text("Cancelled subscription request.")
     else:
@@ -569,7 +561,6 @@ async def settings_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
 ):
     query = update.callback_query
-    await query.answer()
     if query.data == "settings_cancel":
         await query.edit_message_text("Cancelled settings operation.")
     else:
