@@ -338,6 +338,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
         pass
     elif is_income:
         try:
+            await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in Income")
             db.insert_expense(
                 user_id=user_id,
                 amount=amount,
@@ -346,7 +347,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
                 description=description,
                 income=is_income,
             )
-            await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in Income")
         except Exception as e:
             await update.message.reply_text(f"Error inserting income: {str(e)}")
     else:
@@ -392,6 +392,7 @@ async def category_callback_handler(
         amount = state.get("pend_amt")
         description = state.get("pend_desc")
         is_income = state.get("pend_inc")
+        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
         # Store
         db.insert_expense(
             user_id=user_id,
@@ -401,24 +402,23 @@ async def category_callback_handler(
             description=description,
             income=is_income,
         )
-        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
         # Remove temp data
         db.state_table.delete_item(Key={"user_id": user_id})
     except Exception as e:
-        await query.edit_message_text(f"Error deleting pending state: {str(e)}")
+        await query.edit_message_text(f"Error inserting record: {str(e)}")
 
 
 async def history_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB, window: str
 ):
     query = update.callback_query
-    user_id = str(query.from_user.id)
     window = query.data[5:]
-    tz = parse_timezone("UTC-6")
-    today_dt = datetime.now(tz)
     if window == "cancel":
         await query.edit_message_text("Cancelled history request.")
         return
+    user_id = str(query.from_user.id)
+    tz = parse_timezone("UTC-6")
+    today_dt = datetime.now(tz)
     try:
         if window == "Today":
             data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
@@ -465,13 +465,13 @@ async def stats_callback_handler(
     window: str,
 ):
     query = update.callback_query
-    user_id = str(query.from_user.id)
     stats_window = query.data[6:]
-    tz = parse_timezone("UTC-6")
-    today_dt = datetime.now(tz)
     if stats_window == "cancel":
         await query.edit_message_text("Cancelled stats request.")
         return
+    user_id = str(query.from_user.id)
+    tz = parse_timezone("UTC-6")
+    today_dt = datetime.now(tz)
     try:
         if stats_window == "Today":
             data = db.fetch_expenses_by_user_and_date(user_id, today_dt, today_dt)
@@ -540,8 +540,8 @@ async def delete_callback_handler(
         await query.edit_message_text("Cancelled record removal.")
         return
     try:
-        db.remove_expense(user_id, query.data[7:])
         await query.edit_message_text("✅ Record deleted successfully.")
+        db.remove_expense(user_id, query.data[7:])
     except Exception as e:
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
