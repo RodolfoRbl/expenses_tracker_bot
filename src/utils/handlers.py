@@ -134,6 +134,14 @@ Let’s get your finances under control 🚀
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
     help_text = """
+
+Send me your expenses like this:
+👉🏼 2500 groceries
+👉🏼 food 50
+
+To record income, use a + sign:
+👉🏼 +1000 bonus
+
 ⚙️ <b>Bot Commands</b>
 
 <b>/stats</b> 📊 – Show spending statistics
@@ -143,7 +151,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: E
 <b>/history</b> 📋 – Show all records
 
 <b>/last</b> ⌛️ – Show last records
-(Example. /last 8, /last 15, /last)
+<i>(Example. /last 8, /last 15, /last)</i>
 
 <b>/cancel</b> 🚫 – Cancel the current action
 
@@ -337,7 +345,7 @@ async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
                 )
                 return
         else:
-            n = 10
+            n = 5
 
         # Fetch the last N records
         records = db.fetch_latest_expenses(user_id, n)
