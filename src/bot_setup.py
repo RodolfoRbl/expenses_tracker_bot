@@ -14,15 +14,15 @@ async def set_bot_commands():
 
     commands = [
         BotCommand("start", "▶️ Start the bot"),
-        BotCommand("help", "🆘 Show this help message"),
-        BotCommand("last", "⌛️ Show most recent records"),
-        BotCommand("stats", "📊 Show spending statistics"),
+        BotCommand("help", "🆘 Bot instructions"),
+        BotCommand("last", "⌛️ Show last records"),
+        BotCommand("stats", "📊 Statistics"),
         BotCommand("subscription", "💎 View premium benefits"),
         BotCommand("history", "📋 Show all records"),
         BotCommand("delete", "❌ Delete a recent record"),
-        BotCommand("settings", "⚙️ Update your profile/settings ⭐️"),
-        BotCommand("categories", "🗂 Manage and add your own categories ⭐️"),
-        BotCommand("export", "📁 Download your history (CSV) ⭐️"),
+        BotCommand("settings", "⚙️ Custom settings ⭐️"),
+        BotCommand("categories", "🗂 Manage your categories ⭐️"),
+        BotCommand("export", "📁 Download history for Excel ⭐️"),
         BotCommand("budget", "🎯 Set a monthly budget ⭐️"),
     ]
 
