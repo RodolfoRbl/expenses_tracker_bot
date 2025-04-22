@@ -142,6 +142,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: E
 
 <b>/history</b> 📋 – Show all records
 
+<b>/last</b> ⌛️ – Show last records
+(Example. /last 8, /last 15, /last)
+
 <b>/cancel</b> 🚫 – Cancel the current action
 
 <b>/subscription</b> 💎 – View premium benefits
@@ -318,6 +321,42 @@ async def unknown_command_handler(update, context: ContextTypes.DEFAULT_TYPE, db
     await update.message.reply_text(
         "Sorry, I didn't understand that command.\nTry /help for a list of commands."
     )
+
+
+async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+    user_id = str(update.effective_user.id)
+    try:
+        if context.args:
+            try:
+                n = int(context.args[0])
+                if n <= 0:
+                    raise ValueError
+            except ValueError:
+                await update.message.reply_text(
+                    "Please provide a valid positive number. Example: /last 5"
+                )
+                return
+        else:
+            n = 10
+
+        # Fetch the last N records
+        records = db.fetch_latest_expenses(user_id, n)
+        if not records:
+            await update.message.reply_text("No records found.")
+            return
+
+        history = "\n".join(
+            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            + (f" ({item['description']})" if item["description"] else "")
+            for item in records
+        )
+
+        await update.message.reply_text(
+            f"📋 <b>Last {n} Records:</b>\n\n{history}",
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Error fetching records: {str(e)}")
 
 
 # ############################################

@@ -17,6 +17,7 @@ from utils.handlers import (
     message_handler,
     stats_handler,
     history_handler,
+    last_n_handler,
     settings_handler,
     subscription_handler,
     help_handler,
@@ -52,6 +53,7 @@ for cmd, handler in [
     ("subscription", subscription_handler),
     ("stats", stats_handler),
     ("history", history_handler),
+    ("last", last_n_handler),
     # Premium
     ("categories", categories_handler),
     ("budget", budget_handler),
