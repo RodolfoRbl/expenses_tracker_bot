@@ -10,7 +10,7 @@ env:
   FUNCTION_NAME: ai_expenses_bot_v2
   LAYER_NAME: telegram-bot-layer
   TIMEOUT: 10
-  MEMORY_SIZE: 256
+  MEMORY_SIZE: 384
 
 jobs:
   build-layer:
