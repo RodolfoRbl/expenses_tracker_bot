@@ -100,7 +100,6 @@ is_initialized = None
 async def main(event):
     global is_initialized
     try:
-        # async with app:
         if not is_initialized:
             single_msg("Initializing...", BOT_TOKEN, MY_CHAT_ID)
             await app.initialize()
