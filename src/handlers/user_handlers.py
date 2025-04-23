@@ -264,20 +264,14 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        func = update.callback_query.edit_message_text
-    else:
-        func = update.message.reply_text
-    await func("Select time period:", reply_markup=get_stats_keyboard())
+    await update.message.reply_text("Select time period:", reply_markup=get_stats_keyboard())
 
 
 @rate_counter
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        func = update.callback_query.edit_message_text
-    else:
-        func = update.message.reply_text
-    await func("Select time window for history:", reply_markup=get_history_keyboard())
+    await update.message.reply_text(
+        "Select time window for history:", reply_markup=get_history_keyboard()
+    )
 
 
 @rate_counter
@@ -502,7 +496,9 @@ async def _history_callback_handler(update: Update, context: ContextTypes.DEFAUL
             last_day_dt = first_of_month - timedelta(days=1)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, last_day_dt)
         elif window == "back":
-            await history_handler(update, context, db)
+            await update.callback_query.edit_message_text(
+                "Select time window for history:", reply_markup=get_history_keyboard()
+            )
             return
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
@@ -552,7 +548,9 @@ async def _stats_callback_handler(update: Update, context: ContextTypes.DEFAULT_
             start_date = today_dt.replace(year=1900)
             data = db.fetch_expenses_by_user_and_date(user_id, start_date, today_dt)
         elif stats_window == "back":
-            await stats_handler(update, context, db)
+            await update.callback_query.edit_message_text(
+                "Select time period:", reply_markup=get_stats_keyboard()
+            )
             return
         else:
             await query.edit_message_text(f"Invalid time window: {stats_window}")
