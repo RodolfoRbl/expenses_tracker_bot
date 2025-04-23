@@ -7,14 +7,18 @@ from utils.rate_limiter import RateLimiter
 def rate_counter(func):
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        _allowed_reqs = context.bot_data["requests_per_day"]
+        is_admin = update.effective_user.id in context.bot_data["admins"]
+        def_allowed = _allowed_reqs * 20 if is_admin else _allowed_reqs
+
         rlim = RateLimiter(
             update.effective_user.id,
             context.bot.id,
             context.bot_data["db"],
-            max_reqs_allowed=context.bot_data["requests_per_day"],
+            max_reqs_allowed=def_allowed,
         )
         rlim.get_current_reqs()
-        n_warns = rlim.max_reqs_allowed + 3
+        n_warns = rlim.max_reqs_allowed + 5
         is_max = rlim.is_max_reached()
         if update.callback_query:
             ans_func = update.callback_query.edit_message_text
