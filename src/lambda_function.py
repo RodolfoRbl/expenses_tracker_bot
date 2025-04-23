@@ -39,7 +39,7 @@ db = ExpenseDB(region_name="eu-central-1")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 ENVIRONMENT = os.getenv("ENVIRONMENT")
-REQUESTS_PER_DAY = 10
+REQUESTS_PER_DAY = 100
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.bot_data.update(

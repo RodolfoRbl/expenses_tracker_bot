@@ -61,6 +61,4 @@ class RateLimiter:
         return f"{hours} hours and {minutes} minutes" if hours else f"{minutes} minutes"
 
     def is_max_reached(self):
-        print(f"Daily: {self.daily_requests}")
-        print(f"Total: {self.total_requests}")
         return self.daily_requests >= self.max_reqs_allowed

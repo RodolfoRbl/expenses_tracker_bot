@@ -14,17 +14,21 @@ def rate_counter(func):
             max_reqs_allowed=context.bot_data["requests_per_day"],
         )
         rlim.get_current_reqs()
-        if rlim.is_max_reached():
-            if update.callback_query:
-                ans_func = update.callback_query.edit_message_text
-            else:
-                ans_func = update.effective_user.send_message
+        n_warns = rlim.max_reqs_allowed + 3
+        is_max = rlim.is_max_reached()
+        if update.callback_query:
+            ans_func = update.callback_query.edit_message_text
+        else:
+            ans_func = update.effective_user.send_message
+        if not is_max:
+            await func(update, context)
+        elif is_max and rlim.daily_requests < n_warns:
             await ans_func(
                 f"⚠️ <b>Limit reached!</b> Try again in <b>{rlim.get_time_until_reset()}</b> ⏳",
                 parse_mode="HTML",
             )
         else:
-            await func(update, context)
+            pass
         rlim.update_db_reqs()
 
     return wrapper
