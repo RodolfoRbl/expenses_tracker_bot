@@ -11,8 +11,8 @@ from .keyboards import (
     get_subscription_keyboard,
     CATEGORIES,
 )
-from .db import ExpenseDB
 from .general import parse_timezone, get_str_timestamp
+from .decorators import rate_counter
 from decimal import Decimal
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -25,6 +25,10 @@ parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
 # ############################################
 # ######## AUXILIARY
 # ############################################
+
+
+def get_db(context: ContextTypes.DEFAULT_TYPE):
+    return context.bot_data.get("db")
 
 
 def _format_agg_cats(data_dict: dict) -> str:
@@ -74,7 +78,9 @@ async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
 # ############################################
 
 
-async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     await update.message.reply_text(
         """
 Hey, I'm <b>Fundu</b>! 👋🏼
@@ -133,7 +139,8 @@ Let’s get your finances under control 🚀
         )
 
 
-async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """
 
 Send me your expenses like this:
@@ -178,7 +185,8 @@ To record income, use a + sign:
     )
 
 
-async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     premium_text = """
 ⚪️ <b>Subscription is inactive</b>
 
@@ -214,7 +222,9 @@ Download your data to <b>Excel/CSV</b> for backups or analysis.
     )
 
 
-async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     user_id = str(update.effective_user.id)
     try:
         # Fetch last n
@@ -252,7 +262,8 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         await update.message.reply_text(f"Error fetching records: {str(e)}")
 
 
-async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         func = update.callback_query.edit_message_text
     else:
@@ -260,7 +271,8 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: 
     await func("Select time period:", reply_markup=get_stats_keyboard())
 
 
-async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         func = update.callback_query.edit_message_text
     else:
@@ -268,7 +280,8 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
     await func("Select time window for history:", reply_markup=get_history_keyboard())
 
 
-async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
@@ -276,14 +289,17 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, d
     )
 
 
-async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
     )
 
 
-async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     user_id = str(update.effective_user.id)
     try:
         # Fetch all records for the user
@@ -319,20 +335,24 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
         await update.message.reply_text(f"Error exporting data: {str(e)}")
 
 
-async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "<i>⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
         parse_mode="HTML",
     )
 
 
-async def unknown_command_handler(update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def unknown_command_handler(update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Sorry, I didn't understand that command.\nTry /help for a list of commands."
     )
 
 
-async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     user_id = str(update.effective_user.id)
     try:
         if context.args:
@@ -373,7 +393,9 @@ async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db:
 # ############################################
 
 
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+@rate_counter
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     text = update.message.text.strip()
     if len(text) >= 100:
         await update.message.reply_text("Message too long. Please keep it under 100 characters.")
@@ -422,9 +444,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db
 # ############################################
 
 
-async def category_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
-):
+async def _category_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     query = update.callback_query
     user_id = str(query.from_user.id)
     cat_name = query.data[4:]
@@ -456,9 +477,8 @@ async def category_callback_handler(
         await query.edit_message_text(f"Error inserting record: {str(e)}")
 
 
-async def history_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB, window: str
-):
+async def _history_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     query = update.callback_query
     window = query.data[5:]
     if window == "cancel":
@@ -506,12 +526,8 @@ async def history_callback_handler(
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-async def stats_callback_handler(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    db: ExpenseDB,
-    window: str,
-):
+async def _stats_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     query = update.callback_query
     stats_window = query.data[6:]
     if stats_window == "cancel":
@@ -539,7 +555,7 @@ async def stats_callback_handler(
             await stats_handler(update, context, db)
             return
         else:
-            await query.edit_message_text(f"Invalid time window: {window}")
+            await query.edit_message_text(f"Invalid time window: {stats_window}")
             return
 
         if not data:
@@ -582,9 +598,8 @@ async def stats_callback_handler(
         await query.edit_message_text(f"Error fetching history: {str(e)}")
 
 
-async def delete_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
-):
+async def _delete_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
     query = update.callback_query
     user_id = str(query.from_user.id)
     if query.data == "delete_cancel":
@@ -597,9 +612,7 @@ async def delete_callback_handler(
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
-async def subscription_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
-):
+async def _subscription_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query.data == "subscribe_cancel":
         await query.edit_message_text("Cancelled subscription request.")
@@ -608,9 +621,7 @@ async def subscription_callback_handler(
         await query.edit_message_text(f"Pending logic for handling {period} subscription actions.")
 
 
-async def settings_callback_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB
-):
+async def _settings_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query.data == "settings_cancel":
         await query.edit_message_text("Cancelled settings operation.")
@@ -619,27 +630,17 @@ async def settings_callback_handler(
         await query.edit_message_text(f"Pending logic for handling {period} settings.")
 
 
-async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
-    query = update.callback_query
-    if query.data.startswith("cat_"):
-        await category_callback_handler(update, context, db)
-
-    elif query.data.startswith("stats_"):
-        period = query.data[6:]
-        await stats_callback_handler(update, context, db, period)
-
-    elif query.data.startswith("hist_"):
-        window = query.data[5:]
-        await history_callback_handler(update, context, db, window)
-
-    elif query.data.startswith("delete_"):
-        await delete_callback_handler(update, context, db)
-
-    elif query.data.startswith("help_premium"):
-        await subscription_handler(update, context, db)
-
-    elif query.data.startswith("subscribe_"):
-        await subscription_callback_handler(update, context, db)
-
-    elif query.data.startswith("settings_"):
-        await settings_callback_handler(update, context, db)
+@rate_counter
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    prefs_map = {
+        "cat_": _category_callback_handler,
+        "stats_": _stats_callback_handler,
+        "hist_": _history_callback_handler,
+        "delete_": _delete_callback_handler,
+        "subscribe_": _subscription_callback_handler,
+        "settings_": _settings_callback_handler,
+    }
+    for prefix, handler in prefs_map.items():
+        if update.callback_query.data.startswith(prefix):
+            await handler(update, context)
+            break

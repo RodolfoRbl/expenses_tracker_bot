@@ -9,7 +9,8 @@ load_dotenv(override=True)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 
-async def set_bot_commands():
+async def setup():
+
     app = Application.builder().token(BOT_TOKEN).build()
 
     commands = [
@@ -31,4 +32,4 @@ async def set_bot_commands():
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(set_bot_commands())
+    asyncio.get_event_loop().run_until_complete(setup())

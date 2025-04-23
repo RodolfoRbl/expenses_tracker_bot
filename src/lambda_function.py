@@ -1,4 +1,5 @@
 import os
+import requests
 import asyncio
 import json
 from dotenv import load_dotenv
@@ -28,7 +29,7 @@ from utils.handlers import (
     delete_handler,
 )
 
-load_dotenv()
+load_dotenv(override=True)
 
 from utils import admin_handlers as admn  # noqa
 from utils.db import ExpenseDB  # noqa
@@ -38,14 +39,17 @@ db = ExpenseDB(region_name="eu-central-1")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 ENVIRONMENT = os.getenv("ENVIRONMENT")
+REQUESTS_PER_DAY = 10
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-
-def with_db(handler):
-    "Return the function object with the database instance"
-    return lambda u, c: handler(u, c, db)
-
+app.bot_data.update(
+    {
+        "db": db,
+        "admins": {int(i) for i in os.getenv("ADMINS", "").split(",") if i.isdigit()},
+        "owner": MY_CHAT_ID,
+        "requests_per_day": REQUESTS_PER_DAY,
+    }
+)
 
 # Commands
 for cmd, handler in [
@@ -63,11 +67,11 @@ for cmd, handler in [
     ("delete", delete_handler),
     # Admin
     ("empty_user_data", admn.empty_user_data),
-    ("users_stats", admn.get_users_stats),
+    ("usage", admn.usage),
     ("broadcast", admn.broadcast),
     ("admin", admn.admin_help),
 ]:
-    app.add_handler(CommandHandler(cmd, with_db(handler)))
+    app.add_handler(CommandHandler(cmd, handler))
 
 
 # Menu Messages
@@ -78,33 +82,30 @@ for pattern, handler in [
     ("^💹 Stats$", stats_handler),
     ("^📆 History$", history_handler),
 ]:
-    app.add_handler(MessageHandler(filters.Regex(pattern), with_db(handler)))
+    app.add_handler(MessageHandler(filters.Regex(pattern), handler))
 
 # Callback queries
-app.add_handler(CallbackQueryHandler(with_db(callback_handler)))
+app.add_handler(CallbackQueryHandler(callback_handler))
+app.add_handler(CallbackQueryHandler(subscription_handler))  # To avoid duplicate rate count
 
 # General message for expenses
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, with_db(message_handler)))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
 # Unknown commands
-app.add_handler(MessageHandler(filters.COMMAND, with_db(unknown_command_handler)))
+app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
 
-def sm(m):
-    import requests
-
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        json={"chat_id": MY_CHAT_ID, "text": m},
-    )
+sm = lambda m: requests.post(
+    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+    json={"chat_id": MY_CHAT_ID, "text": m},
+)
 
 
-async def main(event, context):
+async def main(event):
     try:
         async with app:
             update = Update.de_json(json.loads(event["body"]), app.bot)
             await app.process_update(update)
-            db.add_activity(str(update.effective_user.id), str(app.bot.id))
     except Exception as e:
         sm(f"ERROR in main: {str(e)}")
     return {"statusCode": 200, "body": "Success"}
@@ -112,7 +113,7 @@ async def main(event, context):
 
 def lambda_handler(event, context):
     try:
-        asyncio.get_event_loop().run_until_complete(main(event, context))
+        asyncio.get_event_loop().run_until_complete(main(event))
         return {"statusCode": 200, "body": "Success"}
     except Exception as e:
         sm(str(e))
@@ -121,4 +122,3 @@ def lambda_handler(event, context):
 if ENVIRONMENT == "local":
     print("Running...")
     app.run_polling()
-    print("Finished.")

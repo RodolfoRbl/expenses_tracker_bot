@@ -1,27 +1,16 @@
-import os
-from functools import wraps
 from telegram import Update
 from telegram.ext import ContextTypes
 from .db import ExpenseDB
-
-ADMINS = {int(x.strip()) for x in os.getenv("ADMINS", "").split(",") if x.strip().isdigit()}
-MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
+from .decorators import admin_only, rate_counter
 
 
-def admin_only(func):
-    @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
-        user_id = update.effective_user.id
-        if user_id in ADMINS:
-            return await func(update, context, *args, **kwargs)
-        else:
-            await update.message.reply_text("⛔ This command is only for admins.")
-
-    return wrapper
+def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:
+    return context.bot_data.get("db")
 
 
+@rate_counter
 @admin_only
-async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help for admins."""
     msg = """
 📋 <b>Admin Commands Help</b>:
@@ -37,9 +26,11 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE, db: Exp
     await update.message.reply_text(msg, parse_mode="HTML")
 
 
+@rate_counter
 @admin_only
-async def empty_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+async def empty_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Delete all records for a specific user."""
+    db = get_db(context)
     user_id = str(update.effective_user.id)
     try:
         records = db.fetch_expenses_by_user_and_date(user_id, "1900-01-01", "2100-12-31")
@@ -49,16 +40,19 @@ async def empty_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE, db
         await update.message.reply_text(f"❌ Error deleting user data: {str(e)}")
 
 
+@rate_counter
 @admin_only
-async def get_users_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+async def usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Get usage statistics for a specific user or all users."""
+    db = get_db(context)
+    owner = context.bot_data["owner"]
     args = context.args
     try:
         if args:
             if args[0] != "me":
                 user_id = str(args[0])
             else:
-                user_id = str(MY_CHAT_ID)
+                user_id = owner
             records = db.fetch_expenses_by_user_and_date(user_id, "1900-01-01", "2100-12-31")
             msg = f"📊 Stats for user {user_id}:\n"
             msg += f"Total records: {len(records)}\n"
@@ -76,7 +70,8 @@ async def get_users_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, db
         await update.message.reply_text(f"❌ Error getting stats: {str(e)}")
 
 
+@rate_counter
 @admin_only
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, db: ExpenseDB):
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message to all bot users."""
     await update.message.reply_text("📣 Broadcasting logic to be implemented")
