@@ -97,9 +97,9 @@ app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
 async def main(event):
     try:
-        async with app:
-            update = Update.de_json(json.loads(event["body"]), app.bot)
-            await app.process_update(update)
+        #async with app:
+        update = Update.de_json(json.loads(event["body"]), app.bot)
+        await app.process_update(update)
     except Exception as e:
         single_msg(f"ERROR in main: {str(e)}")
     return {"statusCode": 200, "body": "Success"}
