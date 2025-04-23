@@ -1,6 +1,7 @@
 import os
 import asyncio
 import json
+from dotenv import load_dotenv
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -10,7 +11,6 @@ from telegram.ext import (
     filters,
 )
 from telegram import Update
-from dotenv import load_dotenv
 from utils.handlers import (
     start_handler,
     callback_handler,
@@ -28,14 +28,16 @@ from utils.handlers import (
     delete_handler,
 )
 
-from utils import admin_handlers as admn
-from utils.db import ExpenseDB
+load_dotenv()
+
+from utils import admin_handlers as admn  # noqa
+from utils.db import ExpenseDB  # noqa
 
 db = ExpenseDB(region_name="eu-central-1")
 
-load_dotenv(override=True)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
+ENVIRONMENT = os.getenv("ENVIRONMENT")
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -114,3 +116,9 @@ def lambda_handler(event, context):
         return {"statusCode": 200, "body": "Success"}
     except Exception as e:
         sm(str(e))
+
+
+if ENVIRONMENT == "local":
+    print("Running...")
+    app.run_polling()
+    print("Finished.")

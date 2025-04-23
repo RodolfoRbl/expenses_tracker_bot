@@ -119,7 +119,8 @@ Let’s get your finances under control 🚀
                 "is_premium": False,
                 "joined_at": curr_time,
                 "last_active": curr_time,
-                "total_requests": 1,
+                "daily_requests": 0,
+                "total_requests": 0,  # It is handled after all handlers
                 "custom_data": {
                     "timezone": "UTC-6",
                     "categories": {},
