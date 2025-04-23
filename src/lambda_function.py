@@ -94,10 +94,17 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
+is_initialized = None
+
 
 async def main(event):
+    global is_initialized
     try:
-        #async with app:
+        # async with app:
+        if not is_initialized:
+            single_msg("Initializing...", BOT_TOKEN, MY_CHAT_ID)
+            await app.initialize()
+            is_initialized = True
         update = Update.de_json(json.loads(event["body"]), app.bot)
         await app.process_update(update)
     except Exception as e:
