@@ -28,8 +28,6 @@ class RateLimiter:
             Key=self.key,
             ProjectionExpression=f"{self.daily_col}, {self.last_act_col}, {self.total_col}",
         ).get("Item", {})
-        print("RESPUESTA")
-        print(response)
         last_date = response.get(self.last_act_col, "")
         daily_requests = response.get(self.daily_col, 0)
         total_requests = response.get(self.total_col, 0)
