@@ -101,7 +101,7 @@ async def main(event):
         update = Update.de_json(json.loads(event["body"]), app.bot)
         await app.process_update(update)
     except Exception as e:
-        single_msg(f"ERROR in main: {str(e)}")
+        single_msg(f"ERROR in main: {str(e)}", BOT_TOKEN, MY_CHAT_ID)
     return {"statusCode": 200, "body": "Success"}
 
 
