@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from .db import ExpenseDB
 from .decorators import admin_only, rate_counter
+from ..utils.db import ExpenseDB
 
 
 def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:

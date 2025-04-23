@@ -1,4 +1,5 @@
 from datetime import timezone, timedelta, datetime
+import requests
 
 
 def parse_timezone(timezone_str: str = "UTC-6") -> timezone:
@@ -21,3 +22,10 @@ def parse_timezone(timezone_str: str = "UTC-6") -> timezone:
 
 def get_str_timestamp():
     return str(int(datetime.now().timestamp()))
+
+
+def single_msg(msg, token, chat_id):
+    return requests.post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json={"chat_id": int(chat_id), "text": msg},
+    )

@@ -1,5 +1,4 @@
 import os
-import requests
 import asyncio
 import json
 from dotenv import load_dotenv
@@ -12,7 +11,7 @@ from telegram.ext import (
     filters,
 )
 from telegram import Update
-from utils.handlers import (
+from handlers.user_handlers import (
     start_handler,
     callback_handler,
     message_handler,
@@ -28,11 +27,12 @@ from utils.handlers import (
     unknown_command_handler,
     delete_handler,
 )
+from handlers.admin_handlers import empty_user_data, usage, broadcast, admin_help
+from utils.db import ExpenseDB  # noqa
+from utils.general import single_msg
 
 load_dotenv(override=True)
 
-from utils import admin_handlers as admn  # noqa
-from utils.db import ExpenseDB  # noqa
 
 db = ExpenseDB(region_name="eu-central-1")
 
@@ -66,10 +66,10 @@ for cmd, handler in [
     ("export", export_handler),
     ("delete", delete_handler),
     # Admin
-    ("empty_user_data", admn.empty_user_data),
-    ("usage", admn.usage),
-    ("broadcast", admn.broadcast),
-    ("admin", admn.admin_help),
+    ("empty_user_data", empty_user_data),
+    ("usage", usage),
+    ("broadcast", broadcast),
+    ("admin", admin_help),
 ]:
     app.add_handler(CommandHandler(cmd, handler))
 
@@ -95,19 +95,13 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
 
 
-sm = lambda m: requests.post(
-    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-    json={"chat_id": MY_CHAT_ID, "text": m},
-)
-
-
 async def main(event):
     try:
         async with app:
             update = Update.de_json(json.loads(event["body"]), app.bot)
             await app.process_update(update)
     except Exception as e:
-        sm(f"ERROR in main: {str(e)}")
+        single_msg(f"ERROR in main: {str(e)}")
     return {"statusCode": 200, "body": "Success"}
 
 
@@ -116,7 +110,7 @@ def lambda_handler(event, context):
         asyncio.get_event_loop().run_until_complete(main(event))
         return {"statusCode": 200, "body": "Success"}
     except Exception as e:
-        sm(str(e))
+        single_msg(str(e))
 
 
 if ENVIRONMENT == "local":
