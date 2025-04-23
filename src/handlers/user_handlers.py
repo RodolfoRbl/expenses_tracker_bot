@@ -185,9 +185,7 @@ To record income, use a + sign:
     )
 
 
-@rate_counter
-async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    premium_text = """
+premium_text = """
 ⚪️ <b>Subscription is inactive</b>
 
 <b>What's included in Premium?</b>
@@ -210,12 +208,11 @@ Specify a date range for your history. Example: <code>2024-01-15 2024-03-25</cod
 🧾 <b>Export</b>
 Download your data to <b>Excel/CSV</b> for backups or analysis.
 """
-    if update.callback_query:
-        func = update.callback_query.edit_message_text
-    else:
-        func = update.message.reply_text
 
-    await func(
+
+@rate_counter
+async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         premium_text,
         reply_markup=get_subscription_keyboard(),
         parse_mode="HTML",
@@ -628,6 +625,13 @@ async def _settings_callback_handler(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text(f"Pending logic for handling {period} settings.")
 
 
+async def _help_premium_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.edit_message_text(
+        premium_text, reply_markup=get_subscription_keyboard(), parse_mode="HTML"
+    )
+
+
 @rate_counter
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prefs_map = {
@@ -637,6 +641,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "delete_": _delete_callback_handler,
         "subscribe_": _subscription_callback_handler,
         "settings_": _settings_callback_handler,
+        "help_premium": _help_premium_handler,
     }
     for prefix, handler in prefs_map.items():
         if update.callback_query.data.startswith(prefix):
