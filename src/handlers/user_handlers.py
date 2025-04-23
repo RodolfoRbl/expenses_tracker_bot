@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from ..utils.keyboards import (
+from utils.keyboards import (
     get_start_keyboard,
     get_category_keyboard,
     get_stats_keyboard,
@@ -11,8 +11,8 @@ from ..utils.keyboards import (
     get_subscription_keyboard,
     CATEGORIES,
 )
-from ..utils.general import parse_timezone, get_str_timestamp
-from .decorators import rate_counter
+from utils.general import parse_timezone, get_str_timestamp
+from handlers.decorators import rate_counter
 from decimal import Decimal
 from datetime import datetime, timedelta
 from collections import defaultdict

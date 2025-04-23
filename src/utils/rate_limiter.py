@@ -1,5 +1,6 @@
 from datetime import datetime
-from .db import ExpenseDB
+from utils.db import ExpenseDB
+from utils.general import get_date_with_tz
 
 
 class RateLimiter:
@@ -20,7 +21,7 @@ class RateLimiter:
         """
         Check if user has exceeded their daily rate limit
         """
-        today = datetime.fromtimestamp(int(self.current_timestamp)).strftime("%Y-%m-%d")
+        today = get_date_with_tz()
 
         # Get today's requests
         response = self.db.users_table.get_item(
@@ -34,8 +35,8 @@ class RateLimiter:
         total_requests = response.get(self.total_col, 0)
 
         # Reset counter if it's a new day
-        last_date_fmt = datetime.fromtimestamp(int(last_date)) if last_date else None
-        if not last_date_fmt or last_date_fmt.strftime("%Y-%m-%d") != today:
+        last_date_fmt = get_date_with_tz(timestamp=int(last_date)) if last_date else None
+        if not last_date_fmt or last_date_fmt != today:
             daily_requests = 0
         self.daily_requests = daily_requests
         self.total_requests = total_requests

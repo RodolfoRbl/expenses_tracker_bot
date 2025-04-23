@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from functools import wraps
-from ..utils.rate_limiter import RateLimiter
+from utils.rate_limiter import RateLimiter
 
 
 def rate_counter(func):
