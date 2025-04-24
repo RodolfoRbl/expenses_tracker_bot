@@ -1,4 +1,5 @@
 from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import ContextTypes
 from utils.keyboards import (
     get_start_keyboard,
@@ -623,15 +624,6 @@ async def _delete_callback_handler(update: Update, context: ContextTypes.DEFAULT
         await query.edit_message_text(f"Error removing record: {str(e)}")
 
 
-async def _subscription_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if query.data == "subscribe_cancel":
-        await query.edit_message_text("Cancelled subscription request.")
-    else:
-        period = query.data.split("_")[-1]
-        await query.edit_message_text(f"Pending logic for handling {period} subscription actions.")
-
-
 async def _settings_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query.data == "settings_cancel":
@@ -648,6 +640,51 @@ async def _help_premium_handler(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
 
+async def _subs_plan_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    SUBSCRIPTION_PRICES = {
+        "1m": 200,
+        "3m": 500,
+        "6m": 1000,
+        "12m": 1500,
+    }
+
+    STARS_TO_USD = {
+        200: 3.99,
+        500: 9.99,
+        1000: 19.99,
+        1500: 29.99,
+    }
+
+    query = update.callback_query
+    plan = query.data.split("_")[-1]
+
+    if plan in SUBSCRIPTION_PRICES:
+        await query.edit_message_text(premium_text, parse_mode="HTML")
+        price = SUBSCRIPTION_PRICES[plan]
+        _months = int(plan.split("m")[0])
+        _plural = "s" if _months > 1 else ""
+        price_list = [LabeledPrice(f"{plan.capitalize()} Subscription", price)]
+
+        await query.message.reply_invoice(
+            title=f"Fundu Premium - {_months} month{_plural} plan",
+            description=f"\n${STARS_TO_USD[price]} USD - Subscription for {_months} month{_plural} access to Fundu Premium\n",
+            payload=f"invoice_subs_{plan}",
+            currency="XTR",
+            provider_token="",
+            prices=price_list,
+            is_flexible=False,
+            photo_url="https://github.com/RodolfoRbl/expenses_tracker_bot/blob/2d748bdf7eb5ac7b8967b4abdc0b3f5875a3a3c6/images/premium.jpg?raw=true",
+            photo_width=400,
+            photo_height=250,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(f"Pay XTR {price}", pay=True)]]
+            ),
+        )
+    elif plan == "cancel":
+        await query.edit_message_text("Cancelled subscription request.")
+
+
 @rate_counter
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prefs_map = {
@@ -655,9 +692,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "stats_": _stats_callback_handler,
         "hist_": _history_callback_handler,
         "delete_": _delete_callback_handler,
-        "subscribe_": _subscription_callback_handler,
         "settings_": _settings_callback_handler,
         "help_premium": _help_premium_handler,
+        "subs_plan_": _subs_plan_callback_handler,
     }
     for prefix, handler in prefs_map.items():
         if update.callback_query.data.startswith(prefix):
