@@ -21,6 +21,10 @@ from collections import defaultdict
 import csv
 import io
 
+CONVERSATION_STATUS = {
+    1: "Waiting Custom Category",
+}
+
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
 
@@ -137,6 +141,7 @@ Let’s get your finances under control 🚀
                     "currency": "USD",
                 },
                 "temp_data": {},
+                "conversation_status": 0,
             }
         )
 
@@ -436,7 +441,7 @@ async def _category_callback_handler(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text("Cancelled new record.")
         return
     try:
-        state = db.get_state(user_id, context.bot.id, "temp_data")  # Get temp data
+        state = db.get_fields(user_id, context.bot.id, "temp_data")  # Get temp data
         if not state:
             await query.edit_message_text("No pending expense or income to log.")
             return

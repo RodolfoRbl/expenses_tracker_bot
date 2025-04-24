@@ -92,7 +92,6 @@ for pattern, handler in [
 
 # Callback queries
 app.add_handler(CallbackQueryHandler(callback_handler))
-app.add_handler(CallbackQueryHandler(subscription_handler))  # To avoid duplicate rate count
 
 # General message for expenses
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))

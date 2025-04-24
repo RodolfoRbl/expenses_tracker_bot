@@ -51,12 +51,22 @@ class ExpenseDB:
         self.table.wait_until_exists()
         print(f"Table '{self.table_name}' created.")
 
-    def get_state(self, user_id: str, bot_id: str, state_field: str) -> Dict[str, Any]:
-        """
-        Get the state of a user from the user states table.
-        """
-        response = self.users_table.get_item(Key={"user_id": str(user_id), "bot_id": str(bot_id)})
-        return response.get("Item", {}).get(state_field)
+    def get_fields(
+        self, user_id: str, bot_id: str, fields: Union[str, List[str]]
+    ) -> Union[Any, Dict[str, Any], None]:
+        if isinstance(fields, str):
+            fields = [fields]
+
+        projection = ", ".join(fields)
+
+        response = self.users_table.get_item(
+            Key={"user_id": str(user_id), "bot_id": str(bot_id)}, ProjectionExpression=projection
+        )
+        item = response.get("Item", {})
+
+        if len(fields) == 1:
+            return item.get(fields[0])
+        return {field: item.get(field) for field in fields}
 
     def insert_expense(
         self,
