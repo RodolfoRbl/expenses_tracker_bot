@@ -40,5 +40,12 @@ def single_msg(msg, token, chat_id):
     )
 
 
+def send_typing_action_raw(token: str, chat_id: int):
+    url = f"https://api.telegram.org/bot{token}/sendChatAction"
+    payload = {"chat_id": chat_id, "action": "typing"}
+    response = requests.post(url, data=payload)
+    return response.json()
+
+
 if __name__ == "__main__":
     print(get_date_with_tz(fmt="%Y-%m-%d %H:%M"))
