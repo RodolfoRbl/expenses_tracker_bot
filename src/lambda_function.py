@@ -29,17 +29,19 @@ from handlers.user_handlers import (
 )
 from handlers.admin_handlers import empty_user_data, usage, broadcast, admin_help
 from utils.db import ExpenseDB  # noqa
-from utils.general import single_msg, send_typing_action_raw
-from threading import Thread
-load_dotenv(override=True)
+from utils.general import single_msg
+
+if os.getenv("MY_ENVIRONMENT"):
+    load_dotenv(override=True)
 
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 ENVIRONMENT = os.getenv("ENVIRONMENT")
 REQUESTS_PER_DAY = 100
-bk_msg = lambda: send_typing_action_raw(BOT_TOKEN, MY_CHAT_ID)
-Thread(target=bk_msg, daemon=True).start()
+
+single_msg("Starting...", BOT_TOKEN, MY_CHAT_ID)
+
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 db = ExpenseDB(region_name="eu-central-1")
 app.bot_data.update(
