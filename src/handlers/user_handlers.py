@@ -11,7 +11,7 @@ from utils.keyboards import (
     get_subscription_keyboard,
     CATEGORIES,
 )
-from utils.general import parse_timezone, get_str_timestamp
+from utils.general import parse_timezone, get_str_timestamp, truncate
 from utils.db import ExpenseDB
 from handlers.decorators import rate_counter
 from decimal import Decimal
@@ -224,40 +224,27 @@ async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     user_id = str(update.effective_user.id)
+
     try:
-        # Fetch last n
         n = 10
         records = db.fetch_latest_expenses(user_id, n)
         if not records:
             await update.message.reply_text("No records found to delete.")
             return
-
-        emoji_map = {
-            1: "1️⃣",
-            2: "2️⃣",
-            3: "3️⃣",
-            4: "4️⃣",
-            5: "5️⃣",
-            6: "6️⃣",
-            7: "7️⃣",
-            8: "8️⃣",
-            9: "9️⃣",
-            10: "🔟",
-        }
-
-        history = "\n".join(
-            f"<b>{emoji_map[i + 1]}</b>. {item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
-            + (f" ({item['description']})" if item["description"] else "")
-            for i, item in enumerate(records)
-        )
-
+        # Build message body
+        history = [
+            f"{item['date']} - ${item['amount']:,.2f} - {parse_cat_id(item['category'])}"
+            + (f" ({truncate(item['description'])})" if item.get("description") else "")
+            for item in records
+        ]
+        keys = [i["timestamp"] for i in records]
         await update.message.reply_text(
-            f"📋 <b>Last {n} Records:</b>\n\n{history}\n\nSelect a record to delete:",
+            "Select a record to <b>delete</b>:",
             parse_mode="HTML",
-            reply_markup=get_delete_keyboard(records),
+            reply_markup=get_delete_keyboard(history, keys),
         )
     except Exception as e:
-        await update.message.reply_text(f"Error fetching records: {str(e)}")
+        await update.message.reply_text(f"Error: {str(e)}")
 
 
 @rate_counter
@@ -621,7 +608,16 @@ async def _delete_callback_handler(update: Update, context: ContextTypes.DEFAULT
         await query.edit_message_text("Cancelled record removal.")
         return
     try:
-        await query.edit_message_text("✅ Record deleted successfully.")
+        item = db.table.get_item(Key={"user_id": str(user_id), "timestamp": query.data[7:]}).get(
+            "Item"
+        )
+
+        txt = (
+            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            + (f" ({item['description']})" if item["description"] else "")
+        )
+
+        await query.edit_message_text(f"🗑 <b>Deleted</b>:\n {txt}", parse_mode="HTML")
         db.remove_expense(user_id, query.data[7:])
     except Exception as e:
         await query.edit_message_text(f"Error removing record: {str(e)}")

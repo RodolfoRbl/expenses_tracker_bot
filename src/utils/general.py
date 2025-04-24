@@ -47,5 +47,9 @@ def send_typing_action_raw(token: str, chat_id: int):
     return response.json()
 
 
+def truncate(text, max_len=15):
+    return text if len(text) <= max_len else text[: max_len - 1] + "…"
+
+
 if __name__ == "__main__":
     print(get_date_with_tz(fmt="%Y-%m-%d %H:%M"))
