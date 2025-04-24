@@ -11,10 +11,8 @@ class ExpenseDB:
     def __init__(self, region_name: str):
         self.dynamodb = boto3.resource("dynamodb", region_name=region_name)
         self.table_name = "Expenses"
-        self.user_states_table = "Telegram_bot_states"
         self.users_table_name = "Users"
         self.table = self.dynamodb.Table(self.table_name)
-        self.state_table = self.dynamodb.Table(self.user_states_table)
         self.users_table = self.dynamodb.Table(self.users_table_name)
         self.region_name = region_name
 
@@ -53,29 +51,12 @@ class ExpenseDB:
         self.table.wait_until_exists()
         print(f"Table '{self.table_name}' created.")
 
-    def create_user_state_table(self) -> None:
-        existing_tables = boto3.client("dynamodb", region_name=self.region_name).list_tables()[
-            "TableNames"
-        ]
-        if self.user_states_table in existing_tables:
-            print(f"Table '{self.user_states_table}' already exists.")
-            return
-
-        self.table = self.dynamodb.create_table(
-            TableName=self.user_states_table,
-            KeySchema=[{"AttributeName": "user_id", "KeyType": "HASH"}],
-            AttributeDefinitions=[{"AttributeName": "user_id", "AttributeType": "S"}],
-            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
-        )
-        self.table.wait_until_exists()
-        print(f"Table '{self.user_states_table}' created.")
-
-    def get_state(self, user_id: str) -> Dict[str, Any]:
+    def get_state(self, user_id: str, bot_id: str, state_field: str) -> Dict[str, Any]:
         """
         Get the state of a user from the user states table.
         """
-        response = self.state_table.get_item(Key={"user_id": user_id})
-        return response.get("Item", {})
+        response = self.users_table.get_item(Key={"user_id": str(user_id), "bot_id": str(bot_id)})
+        return response.get("Item", {}).get(state_field)
 
     def insert_expense(
         self,
@@ -238,5 +219,4 @@ if __name__ == "__main__":
 
     # Create tables
     db.create_table()
-    db.create_user_state_table()
     db.create_users_table()

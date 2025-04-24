@@ -12,6 +12,7 @@ from utils.keyboards import (
     CATEGORIES,
 )
 from utils.general import parse_timezone, get_str_timestamp
+from utils.db import ExpenseDB
 from handlers.decorators import rate_counter
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -27,7 +28,7 @@ parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
 # ############################################
 
 
-def get_db(context: ContextTypes.DEFAULT_TYPE):
+def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:
     return context.bot_data.get("db")
 
 
@@ -134,7 +135,7 @@ Let’s get your finances under control 🚀
                     "budget": 0,
                     "currency": "USD",
                 },
-                "temp": {},
+                "temp_data": {},
             }
         )
 
@@ -418,13 +419,16 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=get_category_keyboard(),
             )
 
-            db.state_table.put_item(
-                Item={
-                    "user_id": user_id,
-                    "pend_amt": Decimal(str(amount)),
-                    "pend_desc": description,
-                    "pend_inc": is_income,
-                }
+            db.users_table.update_item(
+                Key={"user_id": user_id, "bot_id": str(context.bot.id)},
+                UpdateExpression="SET temp_data = :tmp_data",
+                ExpressionAttributeValues={
+                    ":tmp_data": {
+                        "pend_amt": Decimal(str(amount)),
+                        "pend_desc": description,
+                        "pend_inc": is_income,
+                    }
+                },
             )
         except Exception as e:
             await update.message.reply_text(f"Error recording expense: {str(e)}")
@@ -444,8 +448,7 @@ async def _category_callback_handler(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text("Cancelled new record.")
         return
     try:
-        # Get temp data
-        state = db.get_state(user_id)
+        state = db.get_state(user_id, context.bot.id)  # Get temp data
         if not state:
             await query.edit_message_text("No pending expense or income to log.")
             return
@@ -463,7 +466,11 @@ async def _category_callback_handler(update: Update, context: ContextTypes.DEFAU
             income=is_income,
         )
         # Remove temp data
-        db.state_table.delete_item(Key={"user_id": user_id})
+        db.users_table.update_item(
+            Key={"user_id": user_id, "bot_id": str(context.bot.id)},
+            UpdateExpression="SET temp_data = :tmp_data",
+            ExpressionAttributeValues={":tmp_data": {}},
+        )
     except Exception as e:
         await query.edit_message_text(f"Error inserting record: {str(e)}")
 
