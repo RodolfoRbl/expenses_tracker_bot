@@ -14,17 +14,17 @@ async def setup():
     app = Application.builder().token(BOT_TOKEN).build()
 
     commands = [
-        BotCommand("start", "▶️ Start the bot"),
-        BotCommand("help", "🆘 Bot instructions"),
-        BotCommand("last", "⌛️ Show last records"),
-        BotCommand("stats", "📊 Statistics"),
-        BotCommand("subscription", "💎 View premium benefits"),
-        BotCommand("history", "📋 Show all records"),
-        BotCommand("delete", "❌ Delete a recent record"),
-        BotCommand("settings", "⚙️ Custom settings ⭐️"),
-        BotCommand("categories", "🗂 Manage your categories ⭐️"),
-        BotCommand("export", "📁 Download history for Excel ⭐️"),
-        BotCommand("budget", "🎯 Set a monthly budget ⭐️"),
+        BotCommand("start", "Start the bot"),
+        BotCommand("help", "Instructions"),
+        BotCommand("last", "Last records"),
+        BotCommand("stats", "Get statistics"),
+        BotCommand("subscription", "View premium benefits"),
+        BotCommand("history", "Show all records"),
+        BotCommand("delete", "Delete a recent record"),
+        BotCommand("settings", "Custom settings ⭐️"),
+        BotCommand("categories", "Manage your categories ⭐️"),
+        BotCommand("export", "Download history for Excel ⭐️"),
+        BotCommand("budget", "Set a monthly budget ⭐️"),
     ]
 
     await app.bot.set_my_commands(commands)
