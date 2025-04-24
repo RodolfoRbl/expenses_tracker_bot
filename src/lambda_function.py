@@ -1,4 +1,8 @@
 import os
+from utils.general import single_msg
+
+single_msg("Starting...", os.getenv("BOT_TOKEN"), os.getenv("MY_CHAT_ID"))
+
 import asyncio
 import json
 from dotenv import load_dotenv
@@ -29,18 +33,15 @@ from handlers.user_handlers import (
 )
 from handlers.admin_handlers import empty_user_data, usage, broadcast, admin_help
 from utils.db import ExpenseDB  # noqa
-from utils.general import single_msg
 
-if os.getenv("MY_ENVIRONMENT"):
+ENVIRONMENT = os.getenv("MY_ENVIRONMENT")
+
+if ENVIRONMENT == "local":
     load_dotenv(override=True)
-
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
-ENVIRONMENT = os.getenv("ENVIRONMENT")
 REQUESTS_PER_DAY = 100
-
-single_msg("Starting...", BOT_TOKEN, MY_CHAT_ID)
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 db = ExpenseDB(region_name="eu-central-1")
