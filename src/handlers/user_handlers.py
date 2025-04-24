@@ -505,11 +505,24 @@ async def _history_callback_handler(update: Update, context: ContextTypes.DEFAUL
             await query.edit_message_text("No records found for the selected time window.")
             return
 
-        history = "\n".join(
+        entries = [
             f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
             + (f" ({item['description']})" if item["description"] else "")
             for item in data
-        )
+        ]
+
+        history_lines = []
+        total_length = 0
+        for entry in entries:
+            entry_len = len(entry) + 1
+            if total_length + entry_len > 4096 - 3:
+                history_lines.insert(0, "...")
+                break
+            history_lines.insert(0, entry)
+            total_length += entry_len
+
+        history = "\n".join(history_lines)
+
         await query.edit_message_text(
             f"📅 <b>History for {window}</b>:\n\n{history}",
             parse_mode="HTML",

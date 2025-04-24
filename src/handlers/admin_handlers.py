@@ -17,7 +17,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>/empty_user_data</b> - Delete all records for yourself.
 
-<b>/users_stats</b> - Get usage stats for a given user or for all.
+<b>/usage</b> - Get usage stats for a given user or for all.
 
 <b>/broadcast</b> - Send a message to all bot users.
 
@@ -45,7 +45,7 @@ async def empty_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Get usage statistics for a specific user or all users."""
     db = get_db(context)
-    owner = context.bot_data["owner"]
+    owner = str(context.bot_data["owner"])
     args = context.args
     try:
         if args:
