@@ -435,7 +435,7 @@ async def _category_callback_handler(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text("Cancelled new record.")
         return
     try:
-        state = db.get_state(user_id, context.bot.id)  # Get temp data
+        state = db.get_state(user_id, context.bot.id, "temp_data")  # Get temp data
         if not state:
             await query.edit_message_text("No pending expense or income to log.")
             return
