@@ -35,11 +35,11 @@ def get_help_keyboard():
 
 def get_subscription_keyboard():
     buttons = [
-        InlineKeyboardButton("1 Month - $3.99", callback_data="subscribe_1m"),
-        InlineKeyboardButton("3 Months - $9.99", callback_data="subscribe_3m"),
-        InlineKeyboardButton("6 Months - $19.99", callback_data="subscribe_6m"),
-        InlineKeyboardButton("12 Months - $29.99", callback_data="subscribe_12m"),
-        InlineKeyboardButton("Cancel", callback_data="subscribe_cancel"),
+        InlineKeyboardButton("1 month - $3.99", callback_data="subs_plan_1m"),
+        InlineKeyboardButton("3 months - $9.99", callback_data="subs_plan_3m"),
+        InlineKeyboardButton("6 months - $19.99", callback_data="subs_plan_6m"),
+        InlineKeyboardButton("1 year - $29.99", callback_data="subs_plan_12m"),
+        InlineKeyboardButton("Cancel", callback_data="subs_plan_cancel"),
     ]
     return build_menu(buttons, n_cols=1)
 
