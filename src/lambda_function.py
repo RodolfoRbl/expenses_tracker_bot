@@ -1,11 +1,18 @@
 import os
 from utils.general import single_msg
 
+
+ENVIRONMENT = os.getenv("MY_ENVIRONMENT")
+
+if ENVIRONMENT == "local":
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
+
 single_msg("Starting...", os.getenv("BOT_TOKEN"), os.getenv("MY_CHAT_ID"))
 
 import asyncio
 import json
-from dotenv import load_dotenv
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -34,10 +41,6 @@ from handlers.user_handlers import (
 from handlers.admin_handlers import empty_user_data, usage, broadcast, admin_help
 from utils.db import ExpenseDB  # noqa
 
-ENVIRONMENT = os.getenv("MY_ENVIRONMENT")
-
-if ENVIRONMENT == "local":
-    load_dotenv(override=True)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
