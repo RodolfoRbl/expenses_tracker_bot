@@ -10,10 +10,17 @@ from utils.keyboards import (
     get_delete_keyboard,
     get_help_keyboard,
     get_subscription_keyboard,
-    CATEGORIES,
 )
-from utils.general import parse_timezone, get_str_timestamp, truncate
-from utils.db import ExpenseDB
+from utils.general import (
+    parse_timezone,
+    get_str_timestamp,
+    truncate,
+    get_db,
+    format_agg_cats,
+    parse_msg_to_elements,
+)
+
+
 from handlers.decorators import rate_counter
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -21,62 +28,18 @@ from collections import defaultdict
 import csv
 import io
 
-CONVERSATION_STATUS = {
-    1: "Waiting Custom Category",
-}
+from config import (
+    START_TEXT,
+    HELP_TEXT,
+    PREMIUM_TEXT,
+    CATEGORIES,
+    ST_WAIT_CATEGORY,
+    ST_REGULAR,
+)
+
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
 parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
-
-# ############################################
-# ######## AUXILIARY
-# ############################################
-
-
-def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:
-    return context.bot_data.get("db")
-
-
-def _format_agg_cats(data_dict: dict) -> str:
-    total = sum(data_dict.values())
-    sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
-    formatted = [
-        f"<code>${amount:,.2f} ({int(amount / total * 100) if total != 0 else 0}%)</code> - {category}"
-        for category, amount in sorted_data
-    ]
-    return "\n".join(formatted)
-
-
-async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
-    # Split the text into words
-    words = text.split()
-    is_last_digit = words[-1].lstrip("+-").replace(".", "", 1).isdigit()
-    is_first_digit = words[0].lstrip("+-").replace(".", "", 1).isdigit()
-    if len(words) == 1 and is_first_digit:
-        amount = float(words[0])
-        description = ""
-        is_income = "+" in words[0]
-    elif len(words) < 2:
-        await update.message.reply_text("Please use the format: amount description")
-        return [None] * 3
-    elif is_last_digit and is_first_digit:
-        await update.message.reply_text(
-            "Invalid format. Digits should be at the start or end, not both."
-        )
-        return [None] * 3
-    # Check if the first or last word is a valid amount
-    elif is_first_digit:
-        is_income = "+" in words[0]
-        amount = float(words[0])
-        description = " ".join(words[1:])
-    elif is_last_digit:
-        is_income = "+" in words[-1]
-        amount = float(words[-1])
-        description = " ".join(words[:-1])
-    else:
-        await update.message.reply_text("Please use the format: amount description")
-        return [None] * 3
-    return amount, description, is_income
 
 
 # ############################################
@@ -88,27 +51,7 @@ async def _parse_msg_to_elements(update: Update, text: str) -> tuple:
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     await update.message.reply_text(
-        """
-Hey, I'm <b>Fundu</b>! 👋🏼
-
-I'm here to help you track your expenses 💸
-
-Send me your expenses like this:
-👉🏼 2500 groceries
-👉🏼 food 50
-
-To record income, use a <b>+</b> sign:
-💰 +1000 bonus
-
-Here's what I can do for you:
-
-/stats 📊   View your spending stats
-/history 📋   See your full expense history
-/delete ❌   Delete a recent record
-/help 🆘   Full list of available commands
-
-Let’s get your finances under control 🚀
-""",
+        START_TEXT,
         parse_mode="HTML",
         reply_markup=get_start_keyboard(),
     )
@@ -141,86 +84,24 @@ Let’s get your finances under control 🚀
                     "currency": "USD",
                 },
                 "temp_data": {},
-                "conversation_status": 0,
+                "conversation_status": ST_REGULAR,
             }
         )
 
 
 @rate_counter
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-
-Send me your expenses like this:
-👉🏼 2500 groceries
-👉🏼 food 50
-
-To record income, use a + sign:
-👉🏼 +1000 bonus
-
-⚙️ <b>Bot Commands</b>
-
-<b>/stats</b> 📊 – Show spending statistics
-
-<b>/delete</b> ❌ – Delete a recent record
-
-<b>/history</b> 📋 – Show all records
-
-<b>/last</b> ⌛️ – Show last records
-<i>(Example. /last 8, /last 15, /last)</i>
-
-<b>/cancel</b> 🚫 – Cancel the current action
-
-<b>/subscription</b> 💎 – View premium benefits
-
-<b>/help</b> 🆘 – Show this help message
-
-<b>/settings</b> ⚙️ – Update your profile<b>/settings</b> ⭐️
-
-<b>/categories</b> 🗂 – Manage and add your own categories ⭐️
-
-<b>/export</b> 📁 – Download your history (CSV) ⭐️
-
-<b>/budget</b> 🎯 – Set a monthly budget ⭐️
-
-
-⭐️ = <i>Premium features (available with a subscription)</i>
-"""
     await update.message.reply_text(
-        help_text,
+        HELP_TEXT,
         reply_markup=get_help_keyboard(),
         parse_mode="HTML",
     )
 
 
-premium_text = """
-⚪️ <b>Subscription is inactive</b>
-
-<b>What's included in Premium?</b>
-
-👛 <b>Monthly Budget</b>
-Set a budget limit and track how much remains.
-
-💶 <b>Multi-currency Support</b>
-Add any currency to a record. Example: <code>500 JPY beer</code>
-
-📅 <b>Custom Dates</b>
-Backdate expenses. Example: <code>50 groceries yesterday</code> or <code>50 groceries 2024-01-28</code>
-
-✏️ <b>Record Editing</b>
-Edit or delete <b><i>any</i></b> entry — not just the last one.
-
-📅 <b>Custom History</b>
-Specify a date range for your history. Example: <code>2024-01-15 2024-03-25</code>
-
-🧾 <b>Export</b>
-Download your data to <b>Excel/CSV</b> for backups or analysis.
-"""
-
-
 @rate_counter
 async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        premium_text,
+        PREMIUM_TEXT,
         reply_markup=get_subscription_keyboard(),
         parse_mode="HTML",
     )
@@ -378,8 +259,7 @@ async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ############################################
 
 
-@rate_counter
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     text = update.message.text.strip()
     if len(text) >= 100:
@@ -387,7 +267,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = str(update.effective_user.id)
 
-    amount, description, is_income = await _parse_msg_to_elements(update, text)
+    amount, description, is_income = await parse_msg_to_elements(update, text)
     _desc = f"<b>Description</b>: {description}" if description else ""
     if is_income is None:
         pass
@@ -425,6 +305,22 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception as e:
             await update.message.reply_text(f"Error recording expense: {str(e)}")
+
+
+async def _msg_custom_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Logic to validate and update categories")
+    await update.message.reply_text("Reset conv status")
+
+
+@rate_counter
+async def msg_handler_by_conv_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
+    status = db.get_fields(update.effective_user.id, context.bot.id, "conversation_status") or 0
+    msg_hand_map = {
+        ST_REGULAR: _msg_regular,
+        ST_WAIT_CATEGORY: _msg_custom_category,
+    }
+    await msg_hand_map[status](update, context)
 
 
 # ############################################
@@ -592,8 +488,8 @@ async def _stats_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         await query.edit_message_text(
             (
                 f"📊 <b>Stats for {stats_window}</b>:\n\n"
-                f"<b>➖ Expenses</b>\n\n{_format_agg_cats(spe_dict)}\n\n"
-                f"<b>➕ Income\n\n{_format_agg_cats(inc_dict)}</b>\n\n"
+                f"<b>➖ Expenses</b>\n\n{format_agg_cats(spe_dict)}\n\n"
+                f"<b>➕ Income\n\n{format_agg_cats(inc_dict)}</b>\n\n"
                 f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b> ({n_spend})\n"
                 f"<b>Total Income: <code>${income_total:,.2f}</code></b>  ({n_inc})\n\n"
                 f"<b>Total Net:  <code>{sign}${abs(net):,.2f}</code></b>"
@@ -641,7 +537,7 @@ async def _settings_callback_handler(update: Update, context: ContextTypes.DEFAU
 async def _help_premium_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.edit_message_text(
-        premium_text, reply_markup=get_subscription_keyboard(), parse_mode="HTML"
+        PREMIUM_TEXT, reply_markup=get_subscription_keyboard(), parse_mode="HTML"
     )
 
 
@@ -665,7 +561,7 @@ async def _subs_plan_callback_handler(update: Update, context: ContextTypes.DEFA
     plan = query.data.split("_")[-1]
 
     if plan in SUBSCRIPTION_PRICES:
-        await query.edit_message_text(premium_text, parse_mode="HTML")
+        await query.edit_message_text(PREMIUM_TEXT, parse_mode="HTML")
         price = SUBSCRIPTION_PRICES[plan]
         _months = int(plan.split("m")[0])
         _plural = "s" if _months > 1 else ""

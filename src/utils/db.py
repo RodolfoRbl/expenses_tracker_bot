@@ -66,7 +66,7 @@ class ExpenseDB:
 
         if len(fields) == 1:
             return item.get(fields[0])
-        return {field: item.get(field) for field in fields}
+        return item
 
     def insert_expense(
         self,
@@ -221,6 +221,14 @@ class ExpenseDB:
                 ":start": 0,
                 ":now": get_str_timestamp(),
             },
+        )
+
+    def update_field(self, user_id: str, bot_id: str, field: str, value: Any) -> None:
+        self.users_table.update_item(
+            Key={"user_id": str(user_id), "bot_id": str(bot_id)},
+            UpdateExpression="SET #f = :val",
+            ExpressionAttributeNames={"#f": field},
+            ExpressionAttributeValues={":val": value},
         )
 
 

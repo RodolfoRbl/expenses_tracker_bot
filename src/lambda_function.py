@@ -25,7 +25,7 @@ from telegram import Update
 from handlers.user_handlers import (
     start_handler,
     callback_handler,
-    message_handler,
+    msg_handler_by_conv_status,
     stats_handler,
     history_handler,
     last_n_handler,
@@ -56,6 +56,9 @@ app.bot_data.update(
         "requests_per_day": REQUESTS_PER_DAY,
     }
 )
+
+# General message for expenses
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_handler_by_conv_status))
 
 # Commands
 for cmd, handler in [
@@ -93,8 +96,6 @@ for pattern, handler in [
 # Callback queries
 app.add_handler(CallbackQueryHandler(callback_handler))
 
-# General message for expenses
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
 # Unknown commands
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))

@@ -1,27 +1,11 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
-
-# Categories mapping for msgs and database
-CATEGORIES = {
-    "🍔 Food": 0,
-    "🚌 Transport": 1,
-    "🏠 Rent": 2,
-    "💡 Utilities": 3,
-    "🎮 Entertainment": 4,
-    "🛒 Groceries": 5,
-    "💊 Health": 6,
-    "💼 Business": 7,
-    "🎁 Gifts": 8,
-    "✈️ Travel": 9,
-    "📚 Education": 10,
-    "❓ Other": 11,
-    "💰 Income": 99,
-}
-HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
-STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
-
-MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
-
-SETTINGS_OPTIONS = ["💵 Currency", "🌐 Language", "⏰ Timezone", "📂 Categories"]
+from config import (
+    CATEGORIES,
+    HISTORY_WINDOWS,
+    STATS_WINDOWS,
+    MAIN_MENU,
+    SETTINGS_OPTIONS,
+)
 
 
 def build_menu(buttons, n_cols=2):
@@ -92,3 +76,11 @@ def get_settings_keyboard():
 
 def get_start_keyboard():
     return ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
+
+
+def get_category_mgmt_menu():
+    keyboard = [
+        [InlineKeyboardButton("➕ Add Category", callback_data="cat:add")],
+        [InlineKeyboardButton("🗑️ Delete Category", callback_data="cat:delete")],
+    ]
+    return build_menu(keyboard, n_cols=1)
