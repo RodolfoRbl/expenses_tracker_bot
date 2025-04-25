@@ -19,7 +19,7 @@ HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
 
 STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
-MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
+MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Premium"], ["❓ Help"]]
 
 SETTINGS_OPTIONS = [
     "💵 Currency",
@@ -37,7 +37,7 @@ ST_REGULAR = 0
 ST_WAIT_CATEGORY = 1
 
 
-SUBSCRIPTION_PRICES = {
+PREMIUM_PRICES = {
     "1m": 200,
     "3m": 500,
     "6m": 1000,
@@ -74,7 +74,7 @@ To record income, use a + sign:
 
 <b>/cancel</b> 🚫 – Cancel the current action
 
-<b>/subscription</b> 💎 – View premium benefits
+<b>/premium</b> 💎 – View premium benefits
 
 <b>/help</b> 🆘 – Show this help message
 
@@ -92,7 +92,7 @@ To record income, use a + sign:
 
 
 PREMIUM_TEXT = """
-⚪️ <b>Subscription is inactive</b>
+⚪️ <b>Premium plan is inactive</b>
 
 <b>What's included in Premium?</b>
 
@@ -136,3 +136,5 @@ Here's what I can do for you:
 
 Let’s get your finances under control 🚀
 """
+
+CMD_FOR_PREMIUM_TEXT = "<i>⚠️ Command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /premium to get Fundu Premium"

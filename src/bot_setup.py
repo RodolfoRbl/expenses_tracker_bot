@@ -18,7 +18,7 @@ async def setup():
         BotCommand("help", "Instructions"),
         BotCommand("last", "Last records"),
         BotCommand("stats", "Get statistics"),
-        BotCommand("subscription", "View premium benefits"),
+        BotCommand("premium", "View premium benefits"),
         BotCommand("history", "Show all records"),
         BotCommand("delete", "Delete a recent record"),
         BotCommand("settings", "Custom settings ⭐️"),

@@ -17,7 +17,7 @@ def get_help_keyboard():
     return build_menu(buttons, n_cols=1)
 
 
-def get_subscription_keyboard():
+def get_premium_keyboard():
     buttons = [
         InlineKeyboardButton("1 month - $3.99", callback_data="premium:select_plan:1m"),
         InlineKeyboardButton("3 months - $9.99", callback_data="premium:select_plan:3m"),

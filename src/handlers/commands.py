@@ -7,7 +7,7 @@ from utils.keyboards import (
     get_settings_keyboard,
     get_delete_keyboard,
     get_help_keyboard,
-    get_subscription_keyboard,
+    get_premium_keyboard,
 )
 from utils.general import truncate, get_db
 
@@ -22,6 +22,7 @@ from config import (
     START_TEXT,
     HELP_TEXT,
     PREMIUM_TEXT,
+    CMD_FOR_PREMIUM_TEXT,
     CATEGORIES,
     ST_REGULAR,
 )
@@ -82,10 +83,10 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @rate_counter
-async def subscription_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def premium_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         PREMIUM_TEXT,
-        reply_markup=get_subscription_keyboard(),
+        reply_markup=get_premium_keyboard(),
         parse_mode="HTML",
     )
 
@@ -132,18 +133,13 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @rate_counter
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "<i>⚠️ Settings available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
-        parse_mode="HTML",
-        reply_markup=get_settings_keyboard(),
+        CMD_FOR_PREMIUM_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
     )
 
 
 @rate_counter
 async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "<i>⚠️ Categories command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
-        parse_mode="HTML",
-    )
+    await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter
@@ -186,10 +182,7 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "<i>⚠️ Budget command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /subscription to get Fundu Premium",
-        parse_mode="HTML",
-    )
+    await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter

@@ -47,7 +47,7 @@ app.bot_data.update(
 for pattern, handler in [
     ("^❓ Help$", cm_hdl.help_handler),
     ("^⚙️ Settings$", cm_hdl.settings_handler),
-    ("^⭐ Subscription$", cm_hdl.subscription_handler),
+    ("^⭐ Premium$", cm_hdl.premium_handler),
     ("^💹 Stats$", cm_hdl.stats_handler),
     ("^📆 History$", cm_hdl.history_handler),
 ]:
@@ -61,7 +61,7 @@ for cmd, handler in [
     ("start", cm_hdl.start_handler),
     ("help", cm_hdl.help_handler),
     ("settings", cm_hdl.settings_handler),
-    ("subscription", cm_hdl.subscription_handler),
+    ("premium", cm_hdl.premium_handler),
     ("stats", cm_hdl.stats_handler),
     ("history", cm_hdl.history_handler),
     ("last", cm_hdl.last_n_handler),
@@ -104,7 +104,7 @@ callback_queries = {
     "^expenses:delete:id": cb_hdl.confirm_delete_expense,
     # Premium
     "^premium:cancel": cb_hdl.cancel_select_plan,
-    "^premium:select_plan": cb_hdl.confirm_subscription_plan,
+    "^premium:select_plan": cb_hdl.confirm_premium_plan,
     # Unknown callback
     "unknown": cb_hdl.unknown_callback,
 }

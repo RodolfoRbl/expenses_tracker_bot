@@ -7,9 +7,9 @@ from telegram.ext import ContextTypes
 
 from utils.general import get_db, format_agg_cats
 from utils.dates import parse_timezone
-from utils.keyboards import get_history_keyboard, get_subscription_keyboard, get_stats_keyboard
+from utils.keyboards import get_history_keyboard, get_premium_keyboard, get_stats_keyboard
 from handlers._decorators import rate_counter
-from config import CATEGORIES, PREMIUM_TEXT, SUBSCRIPTION_PRICES, STARS_TO_USD
+from config import CATEGORIES, PREMIUM_TEXT, PREMIUM_PRICES, STARS_TO_USD
 
 
 cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
@@ -20,7 +20,7 @@ parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
 async def help_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.edit_message_text(
-        PREMIUM_TEXT, reply_markup=get_subscription_keyboard(), parse_mode="HTML"
+        PREMIUM_TEXT, reply_markup=get_premium_keyboard(), parse_mode="HTML"
     )
 
 
@@ -299,24 +299,24 @@ async def confirm_delete_expense(update: Update, context: ContextTypes.DEFAULT_T
 @rate_counter
 async def cancel_select_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.edit_message_text("Cancelled subscription request.")
+    await query.edit_message_text("Cancelled premium request.")
 
 
 @rate_counter
-async def confirm_subscription_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def confirm_premium_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     plan = query.data.split(":")[-1]
 
-    if plan in SUBSCRIPTION_PRICES:
+    if plan in PREMIUM_PRICES:
         await query.edit_message_text(PREMIUM_TEXT, parse_mode="HTML")
-        price = SUBSCRIPTION_PRICES[plan]
+        price = PREMIUM_PRICES[plan]
         _months = int(plan.split("m")[0])
         _plural = "s" if _months > 1 else ""
-        price_list = [LabeledPrice(f"{plan.capitalize()} Subscription", price)]
+        price_list = [LabeledPrice(f"{plan.capitalize()} Premium", price)]
 
         await query.message.reply_invoice(
             title=f"Fundu Premium - {_months} month{_plural} plan",
-            description=f"\n${STARS_TO_USD[price]} USD - Subscription for {_months} month{_plural} access to Fundu Premium\n",
+            description=f"\n${STARS_TO_USD[price]} USD - Fundu Premium for {_months} month{_plural}\n",
             payload=f"invoice_subs_{plan}",
             currency="XTR",
             provider_token="",
