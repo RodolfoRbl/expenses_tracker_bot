@@ -1,9 +1,7 @@
 import os
 from utils.general import single_msg
 
-
 ENVIRONMENT = os.getenv("MY_ENVIRONMENT")
-
 if ENVIRONMENT == "local":
     from dotenv import load_dotenv
 
@@ -22,25 +20,13 @@ from telegram.ext import (
     filters,
 )
 from telegram import Update
-from handlers.user_handlers import (
-    start_handler,
-    callback_handler,
-    msg_handler_by_conv_status,
-    stats_handler,
-    history_handler,
-    last_n_handler,
-    settings_handler,
-    subscription_handler,
-    help_handler,
-    categories_handler,
-    export_handler,
-    budget_handler,
-    unknown_command_handler,
-    delete_handler,
+from handlers import (
+    commands as cm_hdl,
+    callbacks as cb_hdl,
+    admins as ad_hdl,
+    messages as msg_hdl,
 )
-from handlers.admin_handlers import empty_user_data, usage, broadcast, admin_help
 from utils.db import ExpenseDB  # noqa
-
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
@@ -59,46 +45,75 @@ app.bot_data.update(
 
 # Menu Messages
 for pattern, handler in [
-    ("^❓ Help$", help_handler),
-    ("^⚙️ Settings$", settings_handler),
-    ("^⭐ Subscription$", subscription_handler),
-    ("^💹 Stats$", stats_handler),
-    ("^📆 History$", history_handler),
+    ("^❓ Help$", cm_hdl.help_handler),
+    ("^⚙️ Settings$", cm_hdl.settings_handler),
+    ("^⭐ Subscription$", cm_hdl.subscription_handler),
+    ("^💹 Stats$", cm_hdl.stats_handler),
+    ("^📆 History$", cm_hdl.history_handler),
 ]:
     app.add_handler(MessageHandler(filters.Regex(pattern), handler))
 
 # General message for expenses
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_handler_by_conv_status))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_hdl.text_messages))
 
 # Commands
 for cmd, handler in [
-    ("start", start_handler),
-    ("help", help_handler),
-    ("settings", settings_handler),
-    ("subscription", subscription_handler),
-    ("stats", stats_handler),
-    ("history", history_handler),
-    ("last", last_n_handler),
+    ("start", cm_hdl.start_handler),
+    ("help", cm_hdl.help_handler),
+    ("settings", cm_hdl.settings_handler),
+    ("subscription", cm_hdl.subscription_handler),
+    ("stats", cm_hdl.stats_handler),
+    ("history", cm_hdl.history_handler),
+    ("last", cm_hdl.last_n_handler),
     # Premium
-    ("categories", categories_handler),
-    ("budget", budget_handler),
-    ("export", export_handler),
-    ("delete", delete_handler),
+    ("categories", cm_hdl.categories_handler),
+    ("budget", cm_hdl.budget_handler),
+    ("export", cm_hdl.export_handler),
+    ("delete", cm_hdl.delete_handler),
     # Admin
-    ("empty_user_data", empty_user_data),
-    ("usage", usage),
-    ("broadcast", broadcast),
-    ("admin", admin_help),
+    ("empty_user_data", ad_hdl.empty_user_data),
+    ("usage", ad_hdl.usage),
+    ("broadcast", ad_hdl.broadcast),
+    ("admin", ad_hdl.admin_help),
 ]:
     app.add_handler(CommandHandler(cmd, handler))
 
 
-# Callback queries
-app.add_handler(CallbackQueryHandler(callback_handler))
+callback_queries = {
+    # Help
+    "^help_premium": cb_hdl.help_premium,
+    # Settings
+    "^settings:Currency": cb_hdl.settings_currency,
+    "^settings:Language": cb_hdl.settings_language,
+    "^settings:Timezone": cb_hdl.settings_timezone,
+    "^settings:Categories": cb_hdl.settings_categories,
+    "^settings:Notifications": cb_hdl.settings_notify,
+    "^settings:cancel": cb_hdl.settings_cancel,
+    # History
+    "^history:cancel": cb_hdl.history_cancel,
+    "^history:window": cb_hdl.history_windows,
+    "^history:back_to_menu": cb_hdl.history_back,
+    # Stats
+    "^stats:cancel": cb_hdl.stats_cancel,
+    "^stats:window": cb_hdl.stats_windows,
+    "^stats:back_to_menu": cb_hdl.stats_back,
+    # Expenses (add, delete)
+    "^expenses:cancel": cb_hdl.cancel_new_expense,
+    "^expenses:category": cb_hdl.expense_select_category,
+    "^expenses:delete:cancel": cb_hdl.cancel_expense_deletion,
+    "^expenses:delete:id": cb_hdl.confirm_delete_expense,
+    # Premium
+    "^premium:cancel": cb_hdl.cancel_select_plan,
+    "^premium:select_plan": cb_hdl.confirm_subscription_plan,
+    # Unknown callback
+    "unknown": cb_hdl.unknown_callback,
+}
+
+for pattern, handler in callback_queries.items():
+    app.add_handler(CallbackQueryHandler(handler, pattern))
 
 
-# Unknown commands
-app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
+app.add_handler(MessageHandler(filters.COMMAND, cm_hdl.unknown_command_handler))
 
 is_initialized = None
 

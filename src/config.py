@@ -21,7 +21,13 @@ STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
 MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Subscription"], ["❓ Help"]]
 
-SETTINGS_OPTIONS = ["💵 Currency", "🌐 Language", "⏰ Timezone", "📂 Categories"]
+SETTINGS_OPTIONS = [
+    "💵 Currency",
+    "🌐 Language",
+    "⏰ Timezone",
+    "📂 Categories",
+    "🔔 Notifications",
+]
 
 
 CUSTOM_CATS_LIM = 15
@@ -29,6 +35,21 @@ CUSTOM_CATS_LIM = 15
 # Conversation status
 ST_REGULAR = 0
 ST_WAIT_CATEGORY = 1
+
+
+SUBSCRIPTION_PRICES = {
+    "1m": 200,
+    "3m": 500,
+    "6m": 1000,
+    "12m": 1500,
+}
+
+STARS_TO_USD = {
+    200: 3.99,
+    500: 9.99,
+    1000: 19.99,
+    1500: 29.99,
+}
 
 
 HELP_TEXT = """
