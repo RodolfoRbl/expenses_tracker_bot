@@ -12,14 +12,13 @@ from utils.keyboards import (
     get_subscription_keyboard,
 )
 from utils.general import (
-    parse_timezone,
-    get_str_timestamp,
     truncate,
     get_db,
     format_agg_cats,
     parse_msg_to_elements,
 )
 
+from utils.dates import parse_timezone, get_str_timestamp
 
 from handlers.decorators import rate_counter
 from decimal import Decimal

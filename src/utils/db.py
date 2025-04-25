@@ -4,7 +4,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from typing import List, Dict, Any, Union
 from uuid import uuid4
-from utils.general import parse_timezone, get_str_timestamp
+from utils.dates import parse_timezone, get_str_timestamp
 
 
 class ExpenseDB:

@@ -1,0 +1,32 @@
+from datetime import datetime, timedelta, timezone
+
+
+def parse_timezone(timezone_str: str = "UTC-6") -> timezone:
+    """
+    Parse a timezone string (e.g., 'UTC-6' or 'UTC+3') into a timezone object.
+    """
+    if timezone_str.startswith("UTC") and len(timezone_str) == 5:
+        sign = timezone_str[3]
+        offset_hours = int(timezone_str[4:])
+        if sign == "-":
+            offset = timedelta(hours=-offset_hours)
+        elif sign == "+":
+            offset = timedelta(hours=offset_hours)
+        else:
+            raise ValueError("Invalid timezone format. Use 'UTC±X'.")
+        return timezone(offset)
+    else:
+        return timezone(timedelta(hours=0))
+
+
+def get_str_timestamp():
+    return str(int(datetime.now().timestamp()))
+
+
+def get_date_with_tz(timezone: str = "UTC", fmt="%Y-%m-%d", timestamp: int = None):
+    tz = parse_timezone(timezone)
+    if timestamp:
+        current_time = datetime.fromtimestamp(timestamp, tz)
+    else:
+        current_time = datetime.now(tz)
+    return current_time.strftime(fmt)
