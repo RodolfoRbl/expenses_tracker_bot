@@ -57,6 +57,16 @@ app.bot_data.update(
     }
 )
 
+# Menu Messages
+for pattern, handler in [
+    ("^❓ Help$", help_handler),
+    ("^⚙️ Settings$", settings_handler),
+    ("^⭐ Subscription$", subscription_handler),
+    ("^💹 Stats$", stats_handler),
+    ("^📆 History$", history_handler),
+]:
+    app.add_handler(MessageHandler(filters.Regex(pattern), handler))
+
 # General message for expenses
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_handler_by_conv_status))
 
@@ -82,16 +92,6 @@ for cmd, handler in [
 ]:
     app.add_handler(CommandHandler(cmd, handler))
 
-
-# Menu Messages
-for pattern, handler in [
-    ("^❓ Help$", help_handler),
-    ("^⚙️ Settings$", settings_handler),
-    ("^⭐ Subscription$", subscription_handler),
-    ("^💹 Stats$", stats_handler),
-    ("^📆 History$", history_handler),
-]:
-    app.add_handler(MessageHandler(filters.Regex(pattern), handler))
 
 # Callback queries
 app.add_handler(CallbackQueryHandler(callback_handler))
