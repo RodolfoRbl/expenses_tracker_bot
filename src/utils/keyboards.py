@@ -1,6 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from config import (
-    CATEGORIES,
     HISTORY_WINDOWS,
     STATS_WINDOWS,
     MAIN_MENU,
@@ -35,11 +34,11 @@ def get_delete_keyboard(items, keys):
     return build_menu(buttons, n_cols=1)
 
 
-def get_category_keyboard():
+def get_category_keyboard(cats):
     buttons = [
-        InlineKeyboardButton(cat, callback_data=f"expenses:category:{cat.split()[-1]}")
-        for cat in CATEGORIES
-        if "Income" not in cat
+        InlineKeyboardButton(v["name"], callback_data=f"expenses:category:{k}")
+        for k, v in cats.items()
+        if "Income" not in v["name"]
     ]
     buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="expenses:cancel"))
     return build_menu(buttons, n_cols=3)
@@ -82,13 +81,31 @@ def get_start_keyboard():
     return ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
 
 
-def get_category_mgmt_menu(with_add=True, with_delete=True):
+def get_category_mgmt_menu(with_add=True, with_delete=True, with_reset=True):
     keyboard = []
     if with_add:
-        keyboard.append([InlineKeyboardButton("➕ Add Category", callback_data="cust_cat:add")])
+        keyboard.append(
+            InlineKeyboardButton("➕ Add Category", callback_data="categories:menu:add")
+        )
     if with_delete:
         keyboard.append(
-            [InlineKeyboardButton("🗑️ Delete Category", callback_data="cust_cat:delete")]
+            InlineKeyboardButton("🗑️ Delete Category", callback_data="categories:menu:delete")
         )
-    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cust_cat:cancel")])
+    if with_reset:
+        keyboard.append(InlineKeyboardButton("🔃 Reset", callback_data="categories:menu:reset"))
+    keyboard.append(InlineKeyboardButton("❌ Cancel", callback_data="categories:menu:cancel"))
+    return build_menu(keyboard, n_cols=1)
+
+
+def get_delete_category_keyboard(cats: dict):
+    keyboard = [
+        InlineKeyboardButton(v["name"], callback_data=f"categories:delete:list:{k}")
+        for k, v in cats.items()
+    ]
+    keyboard.extend(
+        [
+            InlineKeyboardButton("⬅️ Back to menu", callback_data="categories:delete:back_to_menu"),
+            InlineKeyboardButton("❌ Cancel", callback_data="categories:menu:cancel"),
+        ]
+    )
     return build_menu(keyboard, n_cols=1)

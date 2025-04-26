@@ -99,9 +99,16 @@ callback_queries = {
     "^stats:back_to_menu": cb_hdl.stats_back,
     # Expenses (add, delete)
     "^expenses:cancel": cb_hdl.cancel_new_expense,
-    "^expenses:category": cb_hdl.expense_select_category,
+    "^expenses:category": cb_hdl.expense_confirm_category,
     "^expenses:delete:cancel": cb_hdl.cancel_expense_deletion,
     "^expenses:delete:id": cb_hdl.confirm_delete_expense,
+    # Categories
+    "^categories:menu:cancel": cb_hdl.cancel_mgmt_categories,
+    "^categories:menu:add": cb_hdl.add_category,
+    "^categories:menu:reset": cb_hdl.reset_categories,
+    "^categories:menu:delete": cb_hdl.delete_category,
+    "^categories:delete:back_to_menu": cb_hdl.categories_back_to_menu,
+    "^categories:delete:list": cb_hdl.confirm_delete_category,
     # Premium
     "^premium:cancel": cb_hdl.cancel_select_plan,
     "^premium:select_plan": cb_hdl.confirm_premium_plan,

@@ -5,15 +5,53 @@ from decimal import Decimal
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import ContextTypes
 
-from utils.general import get_db, format_agg_cats
+from utils.general import get_db, format_agg_cats, get_active_categories
 from utils.dates import parse_timezone
-from utils.keyboards import get_history_keyboard, get_premium_keyboard, get_stats_keyboard
+from utils.keyboards import (
+    get_history_keyboard,
+    get_premium_keyboard,
+    get_stats_keyboard,
+    get_category_mgmt_menu,
+    get_delete_category_keyboard,
+)
 from handlers._decorators import rate_counter
-from config import CATEGORIES, PREMIUM_TEXT, PREMIUM_PRICES, STARS_TO_USD
+from config import (
+    DEFAULT_CATEGORIES,
+    PREMIUM_TEXT,
+    PREMIUM_PRICES,
+    STARS_TO_USD,
+    MAX_CATEGORIES,
+    ST_WAIT_CATEGORY,
+)
 
 
-cat_map = {k.split()[-1]: v for k, v in CATEGORIES.items()}
-parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
+# ##############################################################
+# Shared (don't count for rate limiting)
+# ##############################################################
+
+
+async def _show_categories_to_manage(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    func = (
+        update.callback_query.edit_message_text
+        if update.callback_query
+        else update.message.reply_text
+    )
+    db = get_db(context)
+    try:
+        act_cats = get_active_categories(db, update.effective_user.id, context.bot.id)
+        message = "Here are your categories:\n\n" + "\n".join(
+            cat["name"] for cat in act_cats.values()
+        )
+
+        can_add = len(act_cats) < MAX_CATEGORIES
+        can_delete = len(act_cats) > 1
+        await func(
+            message,
+            parse_mode="HTML",
+            reply_markup=get_category_mgmt_menu(with_add=can_add, with_delete=can_delete),
+        )
+    except Exception as e:
+        await func(f"Error fetching categories: {str(e)}")
 
 
 @rate_counter
@@ -49,8 +87,7 @@ async def settings_timezone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def settings_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.edit_message_text("Pending logic for handling categories settings.")
+    await _show_categories_to_manage(update, context)
 
 
 @rate_counter
@@ -112,8 +149,10 @@ async def history_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("No records found for the selected time window.")
             return
 
+        cats = db.get_fields(user_id, context.bot.id, "categories")
+
         entries = [
-            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {cats[item['category']]['name']}"
             + (f" ({item['description']})" if item["description"] else "")
             for item in data
         ]
@@ -186,11 +225,13 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         category_totals = defaultdict(Decimal)
+        cats = db.get_fields(user_id, context.bot.id, "categories")
+
         for item in data:
-            cat_name = parse_cat_id(int(item["category"]))
+            cat_name = cats[item["category"]]["name"]
             category_totals[cat_name] += Decimal(item["amount"])
 
-        n_spend = sum([1 for i in data if int(i["category"]) != 99])
+        n_spend = sum([1 for i in data if i["category"] != "99"])
         n_inc = len(data) - n_spend
 
         # Format the grouped data
@@ -233,25 +274,29 @@ async def cancel_new_expense(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 @rate_counter
-async def expense_select_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def expense_confirm_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     query = update.callback_query
     user_id = str(query.from_user.id)
-    cat_name = query.data.split(":")[-1]
+    cat_id = query.data.split(":")[-1]
     try:
-        state = db.get_fields(user_id, context.bot.id, "temp_data")  # Get temp data
+        _data = db.get_fields(user_id, context.bot.id, ["temp_data", "categories"])  # Get temp data
+        state = _data["temp_data"]
+        cats = _data["categories"]
         if not state:
             await query.edit_message_text("No pending expense or income to log.")
             return
         amount = state.get("pend_amt")
         description = state.get("pend_desc")
         is_income = state.get("pend_inc")
-        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_name}")
+        cat_text = cats[cat_id]["name"]
+        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_text}")
+
         # Store
         db.insert_expense(
             user_id=user_id,
             amount=amount,
-            category=str(cat_map[cat_name]),
+            category=str(cat_id),
             currency="USD",  # Default currency
             description=description,
             income=is_income,
@@ -280,9 +325,10 @@ async def confirm_delete_expense(update: Update, context: ContextTypes.DEFAULT_T
     expense_id = query.data.split(":")[-1]
     try:
         item = db.table.get_item(Key={"user_id": str(user_id), "timestamp": expense_id}).get("Item")
-        txt = (
-            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
-            + (f" ({item['description']})" if item["description"] else "")
+        cat_id = item["category"]
+        cat_name = db.get_fields(user_id, context.bot.id, "categories")[cat_id]["name"]
+        txt = f"{item['date']}: <code>${item['amount']:,.2f}</code> - {cat_name}" + (
+            f" ({item['description']})" if item["description"] else ""
         )
 
         await query.edit_message_text(f"🗑 <b>Deleted</b>:\n {txt}", parse_mode="HTML")
@@ -331,6 +377,76 @@ async def confirm_premium_plan(update: Update, context: ContextTypes.DEFAULT_TYP
         )
     else:
         await query.edit_message_text("Plan not identified.")
+
+
+# ##############################################################
+# Categories
+# ##############################################################
+
+
+@rate_counter
+async def cancel_mgmt_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.edit_message_text("Cancelled categories operation.")
+
+
+@rate_counter
+async def categories_back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _show_categories_to_manage(update, context)
+
+
+@rate_counter
+async def add_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    db = get_db(context)
+    await query.edit_message_text(
+        "Please send the name of the new category. It should be unique and not exceed 20 characters."
+    )
+    db.update_field(
+        update.effective_user.id, context.bot.id, "conversation_status", ST_WAIT_CATEGORY
+    )
+
+
+@rate_counter
+async def reset_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = get_db(context)
+    user_id = str(update.effective_user.id)
+    bot_id = str(context.bot.id)
+    try:
+        categories = db.get_fields(user_id, bot_id, "categories")
+        for cat_id, _ in categories.items():
+            if cat_id in DEFAULT_CATEGORIES:
+                categories[cat_id]["active"] = 1
+            else:
+                categories[cat_id]["active"] = 0
+        await update.callback_query.edit_message_text("Categories have been reset to default.")
+        db.update_field(user_id, bot_id, "categories", categories)
+    except Exception as e:
+        await update.callback_query.edit_message_text(f"Error resetting categories: {str(e)}")
+
+
+@rate_counter
+async def delete_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    db = get_db(context)
+    try:
+        cats = get_active_categories(db, update.effective_user.id, context.bot.id)
+        await query.edit_message_text(
+            "Select a category to delete:", reply_markup=get_delete_category_keyboard(cats)
+        )
+    except Exception as e:
+        await query.edit_message_text(f"Error fetching categories: {str(e)}")
+
+
+@rate_counter
+async def confirm_delete_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    db = get_db(context)
+    deleted_id = query.data.split(":")[-1]
+    cats = db.get_fields(update.effective_user.id, context.bot.id, "categories")
+    await query.edit_message_text(f"🗑 Category {cats[deleted_id]['name']} was deleted.")
+    cats[deleted_id]["active"] = 0
+    db.update_field(update.effective_user.id, context.bot.id, "categories", cats)
 
 
 @rate_counter

@@ -10,7 +10,7 @@ from utils.keyboards import (
     get_premium_keyboard,
 )
 from utils.general import truncate, get_db
-
+from handlers.callbacks import _show_categories_to_manage
 from utils.dates import parse_timezone, get_str_timestamp
 
 from handlers._decorators import rate_counter
@@ -23,12 +23,9 @@ from config import (
     HELP_TEXT,
     PREMIUM_TEXT,
     CMD_FOR_PREMIUM_TEXT,
-    CATEGORIES,
+    DEFAULT_CATEGORIES,
     ST_REGULAR,
 )
-
-
-parse_cat_id = lambda id: {v: k for k, v in CATEGORIES.items()}[int(id)]
 
 
 @rate_counter
@@ -60,13 +57,11 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "last_active": curr_time,
                 "daily_requests": 0,
                 "total_requests": 0,  # It is handled after all handlers
-                "custom_data": {
-                    "timezone": "UTC-6",
-                    "categories": {},
-                    "lang": "EN",
-                    "budget": 0,
-                    "currency": "USD",
-                },
+                "timezone": "UTC-6",
+                "categories": DEFAULT_CATEGORIES,
+                "lang": "EN",
+                "budget": 0,
+                "currency": "USD",
                 "temp_data": {},
                 "conversation_status": ST_REGULAR,
             }
@@ -103,8 +98,9 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("No records found to delete.")
             return
         # Build message body
+        cats = db.get_fields(user_id, context.bot.id, "categories")
         history = [
-            f"{item['date']} - ${item['amount']:,.2f} - {parse_cat_id(item['category'])}"
+            f"{item['date']} - ${item['amount']:,.2f} - {cats[item['category']]['name']}"
             + (f" ({truncate(item['description'])})" if item.get("description") else "")
             for item in records
         ]
@@ -139,7 +135,7 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+    await _show_categories_to_manage(update, context)
 
 
 @rate_counter
@@ -159,12 +155,13 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         writer = csv.writer(output)
 
         writer.writerow(["Date", "Amount", "Category", "Description", "Income"])
+        cats = db.get_fields(user_id, context.bot.id, "categories")
         for record in records:
             writer.writerow(
                 [
                     record["date"],
                     record["amount"],
-                    parse_cat_id(record["category"].split()[-1]),
+                    cats[record["category"]]["name"],
                     record.get("description", ""),
                     "Yes" if record["income"] else "No",
                 ]
@@ -208,9 +205,9 @@ async def last_n_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not records:
             await update.message.reply_text("No records found.")
             return
-
+        cats = db.get_fields(user_id, context.bot.id, "categories")
         history = "\n".join(
-            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {parse_cat_id(item['category'])}"
+            f"{item['date']}: <code>${item['amount']:,.2f}</code> - {cats[item['category']]['name']}"
             + (f" ({item['description']})" if item["description"] else "")
             for item in records
         )

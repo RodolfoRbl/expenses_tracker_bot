@@ -27,6 +27,10 @@ def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:
     return context.bot_data.get("db")
 
 
+def get_active_categories(db: ExpenseDB, user_id: str, bot_id: str) -> dict:
+    return {k: v for k, v in db.get_fields(user_id, bot_id, "categories").items() if v["active"] == 1}
+
+
 def format_agg_cats(data_dict: dict) -> str:
     total = sum(data_dict.values())
     sorted_data = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)

@@ -3,10 +3,11 @@ from decimal import Decimal
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from utils.keyboards import get_category_keyboard
-from utils.general import get_db, parse_msg_to_elements
+from utils.keyboards import get_category_keyboard, get_category_mgmt_menu
+from utils.general import get_db, parse_msg_to_elements, get_active_categories
 from handlers._decorators import rate_counter
 from config import ST_WAIT_CATEGORY, ST_REGULAR
+import uuid
 
 
 async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,10 +37,11 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Error inserting income: {str(e)}")
     else:
         try:
+            act_cats = get_active_categories(db, user_id, context.bot.id)
             await update.message.reply_text(
                 f"<b>Expense</b>: ${amount:,.2f}\n{_desc}\n" "Please select a category:",
                 parse_mode="HTML",
-                reply_markup=get_category_keyboard(),
+                reply_markup=get_category_keyboard(act_cats),
             )
 
             db.users_table.update_item(
@@ -58,8 +60,32 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def _msg_custom_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Logic to validate and update categories")
-    await update.message.reply_text("Reset conv status")
+    db = get_db(context)
+    txt = update.message.text.strip()
+    is_name_ok = not txt.startswith("/") and len(txt) <= 20
+    user_id = str(update.effective_user.id)
+    if is_name_ok:
+        cats = db.get_fields(user_id, context.bot.id, "categories")
+        # Seek if the category already existed
+        for cat_id, cat_data in cats.items():
+            if cat_data["name"] == txt:
+                cats[cat_id]["active"] = 1
+                db.update_field(update.effective_user.id, context.bot.id, "categories", cats)
+                await update.message.reply_text(f"Category '{txt}' reactivated.")
+                db.update_fields(user_id, context.bot.id, "conversation_status", ST_REGULAR)
+                return
+        # If not, create a new one
+        new_cat_id = str(uuid.uuid4()).split("-")[0]
+        new_category = {"name": txt, "active": 1}
+        cats[new_cat_id] = new_category
+        db.update_field(update.effective_user.id, context.bot.id, "categories", cats)
+        await update.message.reply_text(f"New category <b>'{txt}'</b> created.", parse_mode="HTML")
+    else:
+        await update.message.reply_text(
+            "⚠️ Invalid category name. Please try again.",
+            reply_markup=get_category_mgmt_menu(with_delete=False, with_reset=False),
+        )
+    db.update_field(user_id, context.bot.id, "conversation_status", ST_REGULAR)
 
 
 @rate_counter
