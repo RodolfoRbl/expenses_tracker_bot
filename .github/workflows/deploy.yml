@@ -25,16 +25,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Rust (needed for pydantic-core)
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
-          rustc --version
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install build tools
+      - name: Build layer inside Amazon Linux
         run: |
-          sudo apt-get update
-          sudo apt-get install build-essential
+          rm -rf python
+          rm -f my_layer.zip
+
+          docker run --rm -v "$PWD":/var/task amazonlinux:2 bash -c "
+          yum install -y python3-pip zip gcc rust cargo &&
+          pip3 install --upgrade pip &&
+          pip3 install -r requirements.txt -t python &&
+          zip -r9 my_layer.zip python
+
+      - name: Upload layer zip
+        run: |
+          mkdir -p layers
+          mv my_layer.zip layers/
 
       - name: Delete layer (Only for testing purposes)
         run: |
@@ -68,11 +76,6 @@ jobs:
           echo "Layer does not exist. Deploying new layer..."
 
           # Create a zip file for the layer
-          mkdir -p python
-          pip install -r requirements.txt -t python
-          zip -r my_layer.zip python
-          mkdir -p layers
-          mv my_layer.zip layers/
           rm -rf python
 
           # Publish the layer
