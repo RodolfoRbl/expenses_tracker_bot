@@ -41,7 +41,7 @@ def get_category_keyboard(cats):
         if "Income" not in v["name"]
     ]
     buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="expenses:cancel"))
-    return build_menu(buttons, n_cols=3)
+    return build_menu(buttons, n_cols=2)
 
 
 def get_stats_keyboard(is_back_button=False):

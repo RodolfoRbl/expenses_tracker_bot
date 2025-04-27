@@ -12,7 +12,7 @@ from utils.general import (
     replace_all,
 )
 from handlers._decorators import rate_counter
-from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE, MAX_CAT_LENGTH
+from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE, MAX_CAT_LENGTH, DEFAULT_CATEGORIES
 import uuid
 
 
@@ -31,7 +31,9 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     elif is_income:
         try:
-            await update.message.reply_text(f"✅ Logged: <b>${amount:,.2f}</b> in <b>💰 Income</b>", parse_mode="HTML")
+            await update.message.reply_text(
+                f"✅ Logged: <b>${amount:,.2f}</b> in <b>💰 Income</b>", parse_mode="HTML"
+            )
             db.insert_expense(
                 user_id=user_id,
                 amount=amount,
@@ -57,8 +59,17 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     LLM_TEMPLATE, {"{{categories}}": fmt_cats, "{{description}}": description}
                 )
                 ai_cat = ai.generate_response(prompt)
-                ai_cat_id = inverted_cats[ai_cat]
-                await update.message.reply_text(f"✅ Logged: <b>${amount:,.2f}</b> in <b>{ai_cat}</b>", parse_mode="HTML")
+                if not ai_cat:
+                    ai_cat_id = "12"  # Default category
+                    ai_cat = DEFAULT_CATEGORIES[ai_cat_id]["name"]
+                    pref = "⚠️ <i>AI service not available right now, default category will be used.</i>\n\n"
+                else:
+                    pref = ""
+                    ai_cat_id = inverted_cats[ai_cat]
+                await update.message.reply_text(
+                    f"{pref}✅ Logged: <b>${amount:,.2f}</b> in <b>{ai_cat}</b>",
+                    parse_mode="HTML",
+                )
                 db.insert_expense(
                     user_id=user_id,
                     amount=amount,
