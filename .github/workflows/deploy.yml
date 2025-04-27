@@ -28,7 +28,7 @@ jobs:
       - name: Check if Lambda Layer exists
         id: check_layer
         run: |
-          layer_exists=$(aws lambda list-layer-versions --layer-name my-lambda-layer --query "Layers[?LayerVersionArn].LayerVersionArn" --output text)
+          layer_exists=$(aws lambda list-layer-versions --layer-name telegram-bot-layer --query "LayerVersions[0].Version" --output text)
           if [ "$layer_exists" != "None" ]; then
             echo "Layer already exists. Skipping Docker build and deployment."
             echo "exists=true" >> $GITHUB_ENV
