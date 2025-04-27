@@ -131,16 +131,21 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
+    user_id = update.effective_user.id
     is_admin = user_id in context.bot_data.get("admins", [])
-    is_premium = get_db(context).get_fields(user_id, context.bot.id, "is_premium")
-
-    if is_admin or is_premium:
+    if is_admin:
         await update.message.reply_text(
             CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
         )
+        return
     else:
-        await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+        is_premium = get_db(context).get_fields(user_id, context.bot.id, "is_premium")
+        if is_premium:
+            await update.message.reply_text(
+                CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
+            )
+        else:
+            await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter

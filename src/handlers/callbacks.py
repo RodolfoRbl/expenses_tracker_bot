@@ -23,6 +23,7 @@ from config import (
     STARS_TO_USD,
     MAX_CATEGORIES,
     ST_WAIT_CATEGORY,
+    CMD_FOR_PREMIUM_TEXT,
 )
 
 
@@ -123,7 +124,17 @@ async def settings_categories(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @rate_counter
 async def settings_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await _ai_handler(update, context)
+    is_admin = update.effective_user.id in context.bot_data.get("admins", [])
+    if is_admin:
+        await _ai_handler(update, context)
+    else:
+        is_premium = get_db(context).get_fields(
+            update.effective_user.id, context.bot.id, "is_premium"
+        )
+        if is_premium:
+            await _ai_handler(update, context)
+        else:
+            update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter

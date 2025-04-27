@@ -146,7 +146,7 @@ Let’s get your finances under control 🚀
 """
 
 CMD_FOR_PREMIUM_TEXT = "<i>⚠️ Command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /premium to get Fundu Premium"
-CMD_PREMIUM_WELCOME_TEXT = "<b>Welcome!</b> You can now use all premium features.\nSend /help to see what you can do."
+CMD_PREMIUM_WELCOME_TEXT = "<b>Welcome!</b> You can now use all <i>⭐️<b>PREMIUM</b>⭐️</i> features.\nSend /help to see what you can do."
 
 
 LLM_TEMPLATE = """
