@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+import re
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -12,7 +12,7 @@ from utils.general import (
     replace_all,
 )
 from handlers._decorators import rate_counter
-from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE, MAX_CAT_LENGTH, DEFAULT_CATEGORIES
+from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE, MAX_CAT_LENGTH
 import uuid
 
 
@@ -53,6 +53,9 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cats: dict = fields.get("categories")
             act_cats = {k: v["name"] for k, v in cats.items() if v["active"] == 1}
             inverted_cats = {v: k for k, v in act_cats.items()}
+            # Get the category ID for "Other" category
+            other_cat_name = [k for k in inverted_cats.keys() if re.match(r"(?i).*other", k)][0]
+            other_cat_id = inverted_cats[other_cat_name]
             fmt_cats = "\n".join(act_cats.values())
             if is_ai_enabled:
                 prompt = replace_all(
@@ -60,8 +63,8 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 ai_cat = ai.generate_response(prompt)
                 if not ai_cat:
-                    ai_cat_id = "12"  # Default category
-                    ai_cat = DEFAULT_CATEGORIES[ai_cat_id]["name"]
+                    ai_cat_id = other_cat_id  # Default category
+                    ai_cat = other_cat_name
                     pref = "⚠️ <i>AI service not available right now, default category will be used.</i>\n\n"
                 else:
                     pref = ""

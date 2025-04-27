@@ -289,7 +289,7 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
         inc_total = 0
         for i in data:
             i["category"] = cats[i["category"]]["name"]
-            if not re.search(r".*(?i)income", i["category"]):
+            if not re.search(r"(?i).*income", i["category"]):
                 exp.append(i)
                 exp_total += i["amount"]
                 exp
