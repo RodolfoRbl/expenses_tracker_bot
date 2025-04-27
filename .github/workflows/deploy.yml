@@ -25,6 +25,35 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Install Rust (needed for pydantic-core)
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source $HOME/.cargo/env
+          rustc --version
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+
+      - name: Delete layer (Only for testing purposes)
+        run: |
+          EXISTING_LAYER_VERSION=$(aws lambda list-layer-versions \
+          --layer-name ${{ env.LAYER_NAME }} \
+          --query 'LayerVersions[0].Version' \
+          --region ${{ env.AWS_REGION }} \
+          --output text)
+          echo "Existing Layer Version: $EXISTING_LAYER_VERSION"
+
+          if [ "$EXISTING_LAYER_VERSION" != "None" ]; then
+            echo "Deleting existing layer version..."
+            aws lambda delete-layer-version \
+              --layer-name ${{ env.LAYER_NAME }} \
+              --version-number $EXISTING_LAYER_VERSION
+          else
+            echo "No existing layer to delete."
+          fi
+
       - name: Deploy Layer if not exists
         run: |
           # Check if the layer already exists
