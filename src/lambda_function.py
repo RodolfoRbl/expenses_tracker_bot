@@ -26,17 +26,22 @@ from handlers import (
     admins as ad_hdl,
     messages as msg_hdl,
 )
-from utils.db import ExpenseDB  # noqa
+from utils.db import ExpenseDB
+from utils.llm import AIClient
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
+LLM_API_KEY = os.getenv("LLM_API_KEY")
 REQUESTS_PER_DAY = 100
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 db = ExpenseDB(region_name="eu-central-1")
+llm = AIClient(api_key=LLM_API_KEY)
+
 app.bot_data.update(
     {
         "db": db,
+        "llm": llm,
         "admins": {int(i) for i in os.getenv("ADMINS", "").split(",") if i.isdigit()},
         "owner": MY_CHAT_ID,
         "requests_per_day": REQUESTS_PER_DAY,
@@ -50,6 +55,7 @@ for pattern, handler in [
     ("^⭐ Premium$", cm_hdl.premium_handler),
     ("^💹 Stats$", cm_hdl.stats_handler),
     ("^📆 History$", cm_hdl.history_handler),
+    ("^🧠 Artificial Intelligence$", cb_hdl.settings_ai),
 ]:
     app.add_handler(MessageHandler(filters.Regex(pattern), handler))
 
@@ -89,6 +95,9 @@ callback_queries = {
     "^settings:Categories": cb_hdl.settings_categories,
     "^settings:Notifications": cb_hdl.settings_notify,
     "^settings:cancel": cb_hdl.settings_cancel,
+    "^settings:Artificial Intelligence": cb_hdl.settings_ai,
+    # AI
+    "^settings:ai": cb_hdl.ai_change_status,
     # History
     "^history:cancel": cb_hdl.history_cancel,
     "^history:window": cb_hdl.history_windows,

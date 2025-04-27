@@ -13,6 +13,7 @@ from utils.keyboards import (
     get_stats_keyboard,
     get_category_mgmt_menu,
     get_delete_category_keyboard,
+    get_ai_settings_keyboard,
 )
 from handlers._decorators import rate_counter
 from config import (
@@ -38,8 +39,12 @@ async def _show_categories_to_manage(update: Update, context: ContextTypes.DEFAU
     )
     db = get_db(context)
     try:
-        act_cats = get_active_categories(db, update.effective_user.id, context.bot.id)
-        message = "Here are your categories:\n\n" + "\n".join(
+        act_cats = {
+            k: v
+            for k, v in get_active_categories(db, update.effective_user.id, context.bot.id).items()
+            if "Other" not in v["name"]
+        }
+        message = "Here are the categories you can manage:\n\n" + "\n".join(
             cat["name"] for cat in act_cats.values()
         )
 
@@ -52,6 +57,21 @@ async def _show_categories_to_manage(update: Update, context: ContextTypes.DEFAU
         )
     except Exception as e:
         await func(f"Error fetching categories: {str(e)}")
+
+
+async def _ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    func = (
+        update.callback_query.edit_message_text
+        if update.callback_query
+        else update.message.reply_text
+    )
+    db = get_db(context)
+    is_ai = db.get_fields(update.effective_user.id, context.bot.id, "artificial_intelligence")
+    if is_ai:
+        msg = "🟢 AI is currently enabled for your expenses"
+    else:
+        msg = "🔴 AI is not enabled"
+    await func(msg, reply_markup=get_ai_settings_keyboard(is_ai), parse_mode="HTML")
 
 
 @rate_counter
@@ -91,6 +111,11 @@ async def settings_categories(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 @rate_counter
+async def settings_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _ai_handler(update, context)
+
+
+@rate_counter
 async def settings_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.edit_message_text("Pending logic for handling notifications settings.")
@@ -100,6 +125,24 @@ async def settings_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def settings_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.edit_message_text("Cancelled settings request.")
+
+
+# ##############################################################
+# AI activate
+# ##############################################################
+
+
+@rate_counter
+async def ai_change_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    action = query.data.split(":")[-1]
+    db = get_db(context)
+    new_active = False if action == "disable" else True
+    st_txt = "enabled" if new_active else "disabled"
+    await query.edit_message_text(
+        f"✅ AI has been <b>{st_txt}</b> for your expenses.", parse_mode="HTML"
+    )
+    db.update_field(update.effective_user.id, context.bot.id, "artificial_intelligence", new_active)
 
 
 # ##############################################################
@@ -430,7 +473,11 @@ async def delete_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     db = get_db(context)
     try:
-        cats = get_active_categories(db, update.effective_user.id, context.bot.id)
+        cats = {
+            k: v
+            for k, v in get_active_categories(db, update.effective_user.id, context.bot.id).items()
+            if "Other" not in v["name"]
+        }
         await query.edit_message_text(
             "Select a category to delete:", reply_markup=get_delete_category_keyboard(cats)
         )

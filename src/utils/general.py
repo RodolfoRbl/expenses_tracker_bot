@@ -2,6 +2,7 @@ import requests
 from telegram import Update
 from telegram.ext import ContextTypes
 from utils.db import ExpenseDB
+from utils.llm import AIClient
 from utils.dates import get_date_with_tz
 
 
@@ -27,8 +28,14 @@ def get_db(context: ContextTypes.DEFAULT_TYPE) -> ExpenseDB:
     return context.bot_data.get("db")
 
 
+def get_ai_client(context: ContextTypes.DEFAULT_TYPE) -> AIClient:
+    return context.bot_data.get("llm")
+
+
 def get_active_categories(db: ExpenseDB, user_id: str, bot_id: str) -> dict:
-    return {k: v for k, v in db.get_fields(user_id, bot_id, "categories").items() if v["active"] == 1}
+    return {
+        k: v for k, v in db.get_fields(user_id, bot_id, "categories").items() if v["active"] == 1
+    }
 
 
 def format_agg_cats(data_dict: dict) -> str:
@@ -71,6 +78,12 @@ async def parse_msg_to_elements(update: Update, text: str) -> tuple:
         await update.message.reply_text("Please use the format: amount description")
         return [None] * 3
     return amount, description, is_income
+
+
+def replace_all(text: str, replacements: dict) -> str:
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
 
 
 if __name__ == "__main__":

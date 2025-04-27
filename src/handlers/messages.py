@@ -4,14 +4,21 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from utils.keyboards import get_category_keyboard, get_category_mgmt_menu
-from utils.general import get_db, parse_msg_to_elements, get_active_categories
+from utils.general import (
+    get_db,
+    parse_msg_to_elements,
+    get_active_categories,
+    get_ai_client,
+    replace_all,
+)
 from handlers._decorators import rate_counter
-from config import ST_WAIT_CATEGORY, ST_REGULAR
+from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE
 import uuid
 
 
 async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
+    ai = get_ai_client(context)
     text = update.message.text.strip()
     if len(text) >= 100:
         await update.message.reply_text("Message too long. Please keep it under 100 characters.")
@@ -37,24 +44,48 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Error inserting income: {str(e)}")
     else:
         try:
-            act_cats = get_active_categories(db, user_id, context.bot.id)
-            await update.message.reply_text(
-                f"<b>Expense</b>: ${amount:,.2f}\n{_desc}\n" "Please select a category:",
-                parse_mode="HTML",
-                reply_markup=get_category_keyboard(act_cats),
+            fields = db.get_fields(
+                user_id, context.bot.id, ["artificial_intelligence", "categories"]
             )
+            is_ai_enabled = fields.get("artificial_intelligence")
+            cats: dict = fields.get("categories")
+            act_cats = {k: v["name"] for k, v in cats.items() if v["active"] == 1}
+            inverted_cats = {v: k for k, v in act_cats.items()}
+            fmt_cats = "\n".join(cats)
+            if is_ai_enabled:
+                prompt = replace_all(
+                    LLM_TEMPLATE, {"{{categories}}": fmt_cats, "{{description}}": description}
+                )
+                ai_cat = ai.generate_response(prompt)
+                ai_cat_id = inverted_cats[ai_cat]
+                await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in {ai_cat}")
+                db.insert_expense(
+                    user_id=user_id,
+                    amount=amount,
+                    category=ai_cat_id,
+                    currency="USD",
+                    description=description,
+                    income=is_income,
+                )
+            else:
+                act_cats = get_active_categories(db, user_id, context.bot.id)
+                await update.message.reply_text(
+                    f"<b>Expense</b>: ${amount:,.2f}\n{_desc}\n" "Please select a category:",
+                    parse_mode="HTML",
+                    reply_markup=get_category_keyboard(act_cats),
+                )
 
-            db.users_table.update_item(
-                Key={"user_id": user_id, "bot_id": str(context.bot.id)},
-                UpdateExpression="SET temp_data = :tmp_data",
-                ExpressionAttributeValues={
-                    ":tmp_data": {
-                        "pend_amt": Decimal(str(amount)),
-                        "pend_desc": description,
-                        "pend_inc": is_income,
-                    }
-                },
-            )
+                db.users_table.update_item(
+                    Key={"user_id": user_id, "bot_id": str(context.bot.id)},
+                    UpdateExpression="SET temp_data = :tmp_data",
+                    ExpressionAttributeValues={
+                        ":tmp_data": {
+                            "pend_amt": Decimal(str(amount)),
+                            "pend_desc": description,
+                            "pend_inc": is_income,
+                        }
+                    },
+                )
         except Exception as e:
             await update.message.reply_text(f"Error recording expense: {str(e)}")
 

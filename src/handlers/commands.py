@@ -53,6 +53,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "first_name": update.effective_user.first_name or "",
                 "language_code": update.effective_user.language_code or "",
                 "is_premium": False,
+                "end_premium": "",
                 "joined_at": curr_time,
                 "last_active": curr_time,
                 "daily_requests": 0,
@@ -64,6 +65,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "currency": "USD",
                 "temp_data": {},
                 "conversation_status": ST_REGULAR,
+                "artificial_intelligence": False,
             }
         )
 

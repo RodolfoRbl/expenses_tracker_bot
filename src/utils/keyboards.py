@@ -70,7 +70,7 @@ def get_history_keyboard(is_back_button=False):
 
 def get_settings_keyboard():
     buttons = [
-        InlineKeyboardButton(opt, callback_data=f"settings:{opt.split()[-1]}")
+        InlineKeyboardButton(opt, callback_data=f"settings:{opt.split(maxsplit=1)[-1]}")
         for opt in SETTINGS_OPTIONS
     ]
     buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="settings:cancel"))
@@ -109,3 +109,12 @@ def get_delete_category_keyboard(cats: dict):
         ]
     )
     return build_menu(keyboard, n_cols=1)
+
+
+def get_ai_settings_keyboard(is_ai_enabled: bool):
+    if is_ai_enabled:
+        btn = [InlineKeyboardButton("⚠️ Disable AI", callback_data="settings:ai:disable")]
+    else:
+        btn = [InlineKeyboardButton("🧠 Enable AI", callback_data="settings:ai:enable")]
+    btn.append(InlineKeyboardButton("❌ Cancel", callback_data="settings:cancel"))
+    return build_menu(btn, n_cols=1)

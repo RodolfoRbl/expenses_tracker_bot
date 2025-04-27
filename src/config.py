@@ -19,7 +19,11 @@ HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
 
 STATS_WINDOWS = ["Today", "This Week", "This Month", "This Year", "All Time"]
 
-MAIN_MENU = [["💹 Stats", "📆 History"], ["⚙️ Settings", "⭐ Premium"], ["❓ Help"]]
+MAIN_MENU = [
+    ["💹 Stats", "📆 History"],
+    ["⚙️ Settings", "⭐ Premium"],
+    ["🧠 Artificial Intelligence", "❓ Help"],
+]
 
 SETTINGS_OPTIONS = [
     "💵 Currency",
@@ -27,6 +31,7 @@ SETTINGS_OPTIONS = [
     "⏰ Timezone",
     "📂 Categories",
     "🔔 Notifications",
+    "🧠 Artificial Intelligence",
 ]
 
 
@@ -138,3 +143,35 @@ Let’s get your finances under control 🚀
 """
 
 CMD_FOR_PREMIUM_TEXT = "<i>⚠️ Command available only for ⭐️<b>PREMIUM</b>⭐️ users</i> ⚠️\nSend /premium to get Fundu Premium"
+
+
+LLM_TEMPLATE = """
+You are an assistant that categorizes expenses.
+
+Given a description of an expense, you must select the most fitting category from the following list:
+
+{{categories}}
+
+Rules:
+- You must only answer with the name of one category from the list.
+- No extra text, no explanations, no new categories.
+- The category must include its emoji as shown.
+- Categories are limited to 20 characters maximum, including the emoji.
+- If no description is provided, respond with the "other" category.
+
+Example:
+
+Description: "Lunch with friends at a restaurant"
+Answer: "🍔 Food"
+
+Description: "Bought medicine for a headache"
+Answer: "💊 Health"
+
+Description: ""
+Answer: "❓ Other"
+
+Now categorize this:
+
+Description: "{{description}}"
+Answer:
+"""
