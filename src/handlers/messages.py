@@ -12,7 +12,7 @@ from utils.general import (
     replace_all,
 )
 from handlers._decorators import rate_counter
-from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE
+from config import ST_WAIT_CATEGORY, ST_REGULAR, LLM_TEMPLATE, MAX_CAT_LENGTH
 import uuid
 
 
@@ -31,7 +31,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     elif is_income:
         try:
-            await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in Income")
+            await update.message.reply_text(f"✅ Logged: <b>${amount:,.2f}</b> in <b>💰 Income</b>", parse_mode="HTML")
             db.insert_expense(
                 user_id=user_id,
                 amount=amount,
@@ -58,7 +58,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 ai_cat = ai.generate_response(prompt)
                 ai_cat_id = inverted_cats[ai_cat]
-                await update.message.reply_text(f"✅ Logged: ${amount:,.2f} in {ai_cat}")
+                await update.message.reply_text(f"✅ Logged: <b>${amount:,.2f}</b> in <b>{ai_cat}</b>", parse_mode="HTML")
                 db.insert_expense(
                     user_id=user_id,
                     amount=amount,
@@ -93,7 +93,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def _msg_custom_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     txt = update.message.text.strip()
-    is_name_ok = not txt.startswith("/") and len(txt) <= 20
+    is_name_ok = not txt.startswith("/") and len(txt) <= MAX_CAT_LENGTH
     user_id = str(update.effective_user.id)
     if is_name_ok:
         cats = db.get_fields(user_id, context.bot.id, "categories")
@@ -103,7 +103,7 @@ async def _msg_custom_category(update: Update, context: ContextTypes.DEFAULT_TYP
                 cats[cat_id]["active"] = 1
                 db.update_field(update.effective_user.id, context.bot.id, "categories", cats)
                 await update.message.reply_text(f"Category '{txt}' reactivated.")
-                db.update_fields(user_id, context.bot.id, "conversation_status", ST_REGULAR)
+                db.update_field(user_id, context.bot.id, "conversation_status", ST_REGULAR)
                 return
         # If not, create a new one
         new_cat_id = str(uuid.uuid4()).split("-")[0]
@@ -113,7 +113,7 @@ async def _msg_custom_category(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(f"New category <b>'{txt}'</b> created.", parse_mode="HTML")
     else:
         await update.message.reply_text(
-            "⚠️ Invalid category name. Please try again.",
+            "⚠️ The category name is too long, try again!",
             reply_markup=get_category_mgmt_menu(with_delete=False, with_reset=False),
         )
     db.update_field(user_id, context.bot.id, "conversation_status", ST_REGULAR)

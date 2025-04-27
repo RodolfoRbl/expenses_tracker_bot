@@ -1,7 +1,7 @@
 # Default categories
 DEFAULT_CATEGORIES = {
     "0": {"name": "🍔 Food", "active": 1},
-    "1": {"name": "🚌 Transport", "active": 1},
+    "1": {"name": "🚗 Transport & Cars", "active": 1},
     "2": {"name": "🏠 Rent", "active": 1},
     "3": {"name": "💡 Utilities", "active": 1},
     "4": {"name": "🎮 Entertainment", "active": 1},
@@ -10,10 +10,12 @@ DEFAULT_CATEGORIES = {
     "7": {"name": "💼 Business", "active": 1},
     "8": {"name": "🎁 Gifts", "active": 1},
     "9": {"name": "✈️ Travel", "active": 1},
-    "10": {"name": "📚 Education", "active": 1},
-    "11": {"name": "❓ Other", "active": 1},
+    "10": {"name": "📚 Education & Learning", "active": 1},
+    "11": {"name": "🔧 Home Maintenance", "active": 1},
+    "12": {"name": "❓ Other", "active": 1},
     "99": {"name": "💰 Income", "active": 1},
 }
+
 
 HISTORY_WINDOWS = ["Today", "This Week", "This Month", "Previous Month"]
 
@@ -36,6 +38,7 @@ SETTINGS_OPTIONS = [
 
 
 MAX_CATEGORIES = 15
+MAX_CAT_LENGTH = 30
 
 # Conversation status
 ST_REGULAR = 0

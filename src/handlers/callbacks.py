@@ -16,6 +16,7 @@ from utils.keyboards import (
     get_ai_settings_keyboard,
 )
 from handlers._decorators import rate_counter
+import re
 from config import (
     DEFAULT_CATEGORIES,
     PREMIUM_TEXT,
@@ -42,18 +43,29 @@ async def _show_categories_to_manage(update: Update, context: ContextTypes.DEFAU
         act_cats = {
             k: v
             for k, v in get_active_categories(db, update.effective_user.id, context.bot.id).items()
-            if "Other" not in v["name"]
+            if not re.match(r"(?i).*(income|other)$", v["name"])
         }
-        message = "Here are the categories you can manage:\n\n" + "\n".join(
-            cat["name"] for cat in act_cats.values()
-        )
-
         can_add = len(act_cats) < MAX_CATEGORIES
-        can_delete = len(act_cats) > 1
+        can_delete = len(act_cats) > 0
+        default_manageable = {
+            k: v
+            for k, v in DEFAULT_CATEGORIES.items()
+            if not re.match(r"(?i).*(income|other)$", v["name"])
+        }
+        ix_same_default = act_cats.keys() == default_manageable.keys()
+        if not can_delete:
+            message = "You have no categories to manage."
+        else:
+            message = "Here are the categories you can manage:\n\n" + "\n".join(
+                cat["name"] for cat in act_cats.values()
+            )
+
         await func(
             message,
             parse_mode="HTML",
-            reply_markup=get_category_mgmt_menu(with_add=can_add, with_delete=can_delete),
+            reply_markup=get_category_mgmt_menu(
+                with_add=can_add, with_delete=can_delete, with_reset=not ix_same_default
+            ),
         )
     except Exception as e:
         await func(f"Error fetching categories: {str(e)}")
@@ -333,7 +345,9 @@ async def expense_confirm_category(update: Update, context: ContextTypes.DEFAULT
         description = state.get("pend_desc")
         is_income = state.get("pend_inc")
         cat_text = cats[cat_id]["name"]
-        await query.edit_message_text(f"✅ Logged: ${amount:,.2f} in {cat_text}")
+        await query.edit_message_text(
+            f"✅ Logged: <b>${amount:,.2f}</b> in <b>{cat_text}</b>", parse_mode="HTML"
+        )
 
         # Store
         db.insert_expense(
@@ -476,7 +490,7 @@ async def delete_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cats = {
             k: v
             for k, v in get_active_categories(db, update.effective_user.id, context.bot.id).items()
-            if "Other" not in v["name"]
+            if not re.match(r"(?i).*(income|other)$", v["name"])
         }
         await query.edit_message_text(
             "Select a category to delete:", reply_markup=get_delete_category_keyboard(cats)
