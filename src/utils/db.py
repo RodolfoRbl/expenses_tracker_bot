@@ -119,7 +119,7 @@ class ExpenseDB:
         items = response.get("Items", [])
 
         # Sort items by timestamp
-        items.sort(key=lambda x: x["timestamp"], reverse=ascending)
+        items.sort(key=lambda x: x["timestamp"], reverse=not ascending)
 
         return items
 

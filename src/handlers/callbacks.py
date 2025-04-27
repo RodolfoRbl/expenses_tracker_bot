@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
-from collections import defaultdict
-from decimal import Decimal
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import ContextTypes
 
-from utils.general import get_db, format_agg_cats, get_active_categories
+from utils.general import get_db, get_active_categories
+from utils.stats_format import graph_weekly_expenses
 from utils.dates import parse_timezone
 from utils.keyboards import (
     get_history_keyboard,
@@ -192,10 +191,14 @@ async def history_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     try:
         if window in ["Today", "This Week", "This Month"]:
-            data = db.fetch_expenses_by_user_and_date(user_id, start_dt[window], today_dt)
+            data = db.fetch_expenses_by_user_and_date(
+                user_id, start_dt[window], today_dt, ascending=False
+            )
         elif window == "Previous Month":
             last_day_dt = today_dt.replace(day=1) - timedelta(days=1)
-            data = db.fetch_expenses_by_user_and_date(user_id, start_dt[window], last_day_dt)
+            data = db.fetch_expenses_by_user_and_date(
+                user_id, start_dt[window], last_day_dt, ascending=False
+            )
         else:
             await query.edit_message_text(f"Invalid time window: {window}")
             return
@@ -279,35 +282,38 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("No records found for the selected time window.")
             return
 
-        category_totals = defaultdict(Decimal)
         cats = db.get_fields(user_id, context.bot.id, "categories")
+        exp = []
+        inc = []
+        exp_total = 0
+        inc_total = 0
+        for i in data:
+            i["category"] = cats[i["category"]]["name"]
+            if not re.search(r".*(?i)income", i["category"]):
+                exp.append(i)
+                exp_total += i["amount"]
+                exp
+            else:
+                inc.append(i)
+                inc_total += i["amount"]
 
-        for item in data:
-            cat_name = cats[item["category"]]["name"]
-            category_totals[cat_name] += Decimal(item["amount"])
-
-        n_spend = sum([1 for i in data if i["category"] != "99"])
-        n_inc = len(data) - n_spend
-
-        # Format the grouped data
-        spe_dict = {
-            category: total
-            for category, total in category_totals.items()
-            if "Income" not in category
+        _map = {
+            "Today": "daily",
+            "This Week": "daily",
+            "This Month": "daily",
+            "This Year": "monthly",
+            "All Time": "monthly",
         }
-        inc_dict = {i: category_totals.get(i, 0) for i in ["💰 Income"]}
-        spending_total = sum(category_totals.values())
-        income_total = inc_dict.get("💰 Income", 0)
-        net = income_total - spending_total
-        sign = "- " if net < 0 else ""
+        msg = graph_weekly_expenses(exp, window=_map[stats_window], max_bars=10)
+        sign = "-" if exp_total > inc_total else "+"
+        net = exp_total - inc_total
         await query.edit_message_text(
             (
                 f"📊 <b>Stats for {stats_window}</b>:\n\n"
-                f"<b>➖ Expenses</b>\n\n{format_agg_cats(spe_dict)}\n\n"
-                f"<b>➕ Income\n\n{format_agg_cats(inc_dict)}</b>\n\n"
-                f"<b>Total Expenses: <code>${spending_total:,.2f}</code></b> ({n_spend})\n"
-                f"<b>Total Income: <code>${income_total:,.2f}</code></b>  ({n_inc})\n\n"
-                f"<b>Total Net:  <code>{sign}${abs(net):,.2f}</code></b>"
+                f"<b>➖ Expenses</b>\n\n{msg}\n"
+                f"<b>Total Expenses: <code>${exp_total:,.2f}</code></b> ({len(exp)})\n"
+                f"<b>Total Income: <code>${inc_total:,.2f}</code></b> ({len(inc)})\n\n"
+                f"<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>"
             ),
             parse_mode="HTML",
             reply_markup=get_stats_keyboard(is_back_button=True),
