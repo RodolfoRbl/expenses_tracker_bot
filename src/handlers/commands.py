@@ -23,6 +23,7 @@ from config import (
     HELP_TEXT,
     PREMIUM_TEXT,
     CMD_FOR_PREMIUM_TEXT,
+    CMD_PREMIUM_WELCOME_TEXT,
     DEFAULT_CATEGORIES,
     ST_REGULAR,
 )
@@ -130,9 +131,16 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        CMD_FOR_PREMIUM_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
-    )
+    user_id = str(update.effective_user.id)
+    is_admin = user_id in context.bot_data.get("admins", [])
+    is_premium = get_db(context).get_fields(user_id, context.bot.id, "is_premium")
+
+    if is_admin or is_premium:
+        await update.message.reply_text(
+            CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
+        )
+    else:
+        await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter
