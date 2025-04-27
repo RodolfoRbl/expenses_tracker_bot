@@ -51,7 +51,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cats: dict = fields.get("categories")
             act_cats = {k: v["name"] for k, v in cats.items() if v["active"] == 1}
             inverted_cats = {v: k for k, v in act_cats.items()}
-            fmt_cats = "\n".join(cats)
+            fmt_cats = "\n".join(act_cats.values())
             if is_ai_enabled:
                 prompt = replace_all(
                     LLM_TEMPLATE, {"{{categories}}": fmt_cats, "{{description}}": description}

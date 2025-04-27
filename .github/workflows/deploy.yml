@@ -25,64 +25,44 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check if Lambda Layer exists
+        id: check_layer
+        run: |
+          layer_exists=$(aws lambda list-layer-versions --layer-name my-lambda-layer --query "Layers[?LayerVersionArn].LayerVersionArn" --output text)
+          if [ "$layer_exists" != "None" ]; then
+            echo "Layer already exists. Skipping Docker build and deployment."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "Layer does not exist. Proceeding with Docker build and upload."
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
 
-      - name: Build layer inside Amazon Linux
+      - name: Build Docker image for Lambda Layer
+        if: env.exists == 'false'
         run: |
-          rm -rf python
-          rm -f my_layer.zip
+          docker build -t lambda-layer .
 
-          docker run --rm -v "$PWD":/var/task amazonlinux:2 bash -c "
-          yum install -y python3-pip zip gcc rust cargo &&
-          pip3 install --upgrade pip &&
-          pip3 install -r requirements.txt -t python &&
-          zip -r9 my_layer.zip python
-
-      - name: Upload layer zip
+      - name: Run Docker Lambda Layer container
+        if: env.exists == 'false'
         run: |
+          docker run -d --name lambda-container lambda-layer tail -f /dev/null
+          docker cp lambda-container:/mnt/my-layer.zip ./my-layer.zip &&
+          docker stop lambda-container &&
+          docker rm lambda-container
           mkdir -p layers
-          mv my_layer.zip layers/
-
-      - name: Delete layer (Only for testing purposes)
-        run: |
-          EXISTING_LAYER_VERSION=$(aws lambda list-layer-versions \
-          --layer-name ${{ env.LAYER_NAME }} \
-          --query 'LayerVersions[0].Version' \
-          --region ${{ env.AWS_REGION }} \
-          --output text)
-          echo "Existing Layer Version: $EXISTING_LAYER_VERSION"
-
-          if [ "$EXISTING_LAYER_VERSION" != "None" ]; then
-            echo "Deleting existing layer version..."
-            aws lambda delete-layer-version \
-              --layer-name ${{ env.LAYER_NAME }} \
-              --version-number $EXISTING_LAYER_VERSION
-          else
-            echo "No existing layer to delete."
-          fi
+          mv ./my-layer.zip ./layers/my-layer.zip
 
       - name: Deploy Layer if not exists
+        if: env.exists == 'false'
         run: |
-          # Check if the layer already exists
-          EXISTING_LAYER_VERSION=$(aws lambda list-layer-versions \
-          --layer-name ${{ env.LAYER_NAME }} \
-          --query 'LayerVersions[0].Version' \
-          --region ${{ env.AWS_REGION }} \
-          --output text)
-          echo "Existing Layer Version: $EXISTING_LAYER_VERSION"
-
-          if [ "$EXISTING_LAYER_VERSION" = "None" ]; then
-          echo "Layer does not exist. Deploying new layer..."
-
-          # Create a zip file for the layer
-          rm -rf python
-
           # Publish the layer
           LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name ${{ env.LAYER_NAME }} \
-          --zip-file fileb://layers/my_layer.zip \
-          --compatible-runtimes python3.9 python3.10 python3.11 \
+          --zip-file fileb://layers/my-layer.zip \
+          --compatible-runtimes python3.11 \
           --query 'Version' \
           --output text)
 
@@ -98,9 +78,23 @@ jobs:
             --memory-size ${{ env.MEMORY_SIZE }} \
             --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/service-role/RRR_DynamoDBFullAccess
 
-          else
-          echo "Layer already exists. Skipping deployment."
-            fi
+      # - name: Delete layer (Only for testing purposes)
+      #   run: |
+      #     EXISTING_LAYER_VERSION=$(aws lambda list-layer-versions \
+      #     --layer-name ${{ env.LAYER_NAME }} \
+      #     --query 'LayerVersions[0].Version' \
+      #     --region ${{ env.AWS_REGION }} \
+      #     --output text)
+      #     echo "Existing Layer Version: $EXISTING_LAYER_VERSION"
+
+      #     if [ "$EXISTING_LAYER_VERSION" != "None" ]; then
+      #       echo "Deleting existing layer version..."
+      #       aws lambda delete-layer-version \
+      #         --layer-name ${{ env.LAYER_NAME }} \
+      #         --version-number $EXISTING_LAYER_VERSION
+      #     else
+      #       echo "No existing layer to delete."
+      #     fi
 
   deploy-code:
     runs-on: ubuntu-latest
