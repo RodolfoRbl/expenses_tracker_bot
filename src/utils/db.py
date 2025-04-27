@@ -119,7 +119,7 @@ class ExpenseDB:
         items = response.get("Items", [])
 
         # Sort items by timestamp
-        items.sort(key=lambda x: x["timestamp"], reverse=not ascending)
+        items.sort(key=lambda x: x["timestamp"], reverse=ascending)
 
         return items
 
@@ -187,6 +187,20 @@ class ExpenseDB:
         with self.table.batch_writer() as batch:
             for item in items:
                 batch.delete_item(Key={"user_id": item["user_id"], "timestamp": item["timestamp"]})
+
+    def insert_batch_records(self, records: list) -> bool:
+        """
+        Insert batch records
+        """
+        try:
+            with self.table.batch_writer() as batch:
+                for item in records:
+                    batch.put_item(Item=item)
+            return True
+        except Exception as e:
+            # Log or handle the error properly
+            print(f"Error inserting batch records: {e}")
+            return False
 
     def create_users_table(self) -> None:
         client = boto3.client("dynamodb", region_name=self.region_name)
