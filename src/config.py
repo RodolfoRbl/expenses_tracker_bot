@@ -12,7 +12,8 @@ DEFAULT_CATEGORIES = {
     "9": {"name": "✈️ Travel", "active": 1},
     "10": {"name": "📚 Education & Learning", "active": 1},
     "11": {"name": "🔧 Home Maintenance", "active": 1},
-    "12": {"name": "❓ Other", "active": 1},
+    "12": {"name": "💻 Technology", "active": 1},
+    "13": {"name": "❓ Other", "active": 1},
     "99": {"name": "💰 Income", "active": 1},
 }
 
@@ -174,19 +175,20 @@ CMD_FOR_PREMIUM_TEXT = "<i>⚠️ Command available only for ⭐️<b>PREMIUM</b
 CMD_PREMIUM_WELCOME_TEXT = "<b>Welcome!</b> You can now use all <i>⭐️<b>PREMIUM</b>⭐️</i> features.\nSend /help to see what you can do."
 
 
-LLM_TEMPLATE = """
+LLM_TEMPLATE = f"""
 You are an assistant that categorizes expenses.
 
 Given a description of an expense, you must select the most fitting category from the following list:
 
-{{categories}}
+<<categories>>
 
 Rules:
 - You must only answer with the name of one category from the list.
 - No extra text, no explanations, no new categories.
 - The category must include its emoji as shown.
-- Categories are limited to 20 characters maximum, including the emoji.
-- If no description is provided, respond with the "other" category.
+- Categories are limited to {MAX_CATEGORIES} characters maximum, including the emoji.
+- Only use the "❓ Other" category if **none** of the listed categories are even remotely relevant.
+- Do **not** default to "❓ Other" unless the description is **empty or completely irrelevant to any of the other categories**.
 
 Example:
 
@@ -201,6 +203,6 @@ Answer: "❓ Other"
 
 Now categorize this:
 
-Description: "{{description}}"
+Description: "<<description>>"
 Answer:
 """

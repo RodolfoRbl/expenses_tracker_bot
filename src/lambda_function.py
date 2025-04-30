@@ -101,7 +101,7 @@ callback_queries = {
     "^settings:cancel$": cb_hdl.settings_cancel,
     "^settings:Artificial Intelligence$": cb_hdl.settings_ai,
     # AI
-    "^settings:ai$": cb_hdl.ai_change_status,
+    "^settings:ai:": cb_hdl.ai_change_status,
     # History
     "^history:cancel$": cb_hdl.history_cancel,
     "^history:window:": cb_hdl.history_windows,

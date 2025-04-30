@@ -62,7 +62,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             fmt_cats = "\n".join(act_cats.values())
             if is_ai_enabled:
                 prompt = replace_all(
-                    LLM_TEMPLATE, {"{{categories}}": fmt_cats, "{{description}}": description}
+                    LLM_TEMPLATE, {"<<categories>>": fmt_cats, "<<description>>": description}
                 )
                 ai_cat = ai.generate_response(prompt)
                 if not ai_cat:
