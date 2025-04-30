@@ -60,6 +60,29 @@ STARS_TO_USD = {
 }
 
 
+TZ_BY_OFFSET = {
+    "UTC-8": "LA/Vancouver/Tijuana",
+    "UTC-7": "Denver/Calgary",
+    "UTC-6": "Chicago/Mexico City",
+    "UTC-5": "New York/Toronto/Lima",
+    "UTC-4": "Santiago/Caracas",
+    "UTC-3": "São Paulo/Buenos Aires/Montevideo",
+    "UTC-2": "South Georgia",
+    "UTC-1": "Azores/Cape Verde",
+    "UTC+0": "London/Lisbon/Dakar",
+    "UTC+1": "Berlin/Madrid/Paris",
+    "UTC+2": "Athens/Johannesburg/Cairo",
+    "UTC+3": "Moscow/Istanbul/Nairobi",
+    "UTC+4": "Dubai/Baku/Yerevan",
+    "UTC+5": "Karachi/Tashkent/Yekaterinburg",
+    "UTC+6": "Dhaka/Almaty/Bishkek",
+    "UTC+7": "Bangkok/Jakarta/Ho Chi Minh City",
+    "UTC+8": "Beijing/Singapore/Shanghai",
+    "UTC+9": "Tokyo/Seoul/Pyongyang",
+    "UTC+10": "Sydney/Brisbane",
+}
+
+
 HELP_TEXT = """
 
 Send me your expenses like this:
@@ -82,9 +105,11 @@ To record income, use a + sign:
 
 <b>/cancel</b> 🚫 – Cancel the current action
 
-<b>/premium</b> 💎 – View premium benefits
-
 <b>/help</b> 🆘 – Show this help message
+
+<b>/artificial_intelligence</b> 🧠 – Change AI status
+
+<b>/premium</b> 💎 – View premium benefits
 
 <b>/settings</b> ⚙️ – Update your profile<b>/settings</b> ⭐️
 

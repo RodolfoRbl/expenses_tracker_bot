@@ -78,7 +78,6 @@ class ExpenseDB:
         income: bool = False,
         timezone: str = "UTC-6",
     ) -> None:
-
         # Parse the timezone string (e.g., "UTC-6" or "UTC+3")
         tz = parse_timezone(timezone)
         current_time = datetime.now(tz)

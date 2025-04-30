@@ -71,6 +71,7 @@ for cmd, handler in [
     ("stats", cm_hdl.stats_handler),
     ("history", cm_hdl.history_handler),
     ("last", cm_hdl.last_n_handler),
+    ("artificial_intelligence", cm_hdl.cmd_ai_handler),
     # Premium
     ("categories", cm_hdl.categories_handler),
     ("budget", cm_hdl.budget_handler),
@@ -87,40 +88,43 @@ for cmd, handler in [
 
 callback_queries = {
     # Help
-    "^help_premium": cb_hdl.help_premium,
+    "^help_premium$": cb_hdl.help_premium,
     # Settings
-    "^settings:Currency": cb_hdl.settings_currency,
-    "^settings:Language": cb_hdl.settings_language,
-    "^settings:Timezone": cb_hdl.settings_timezone,
-    "^settings:Categories": cb_hdl.settings_categories,
-    "^settings:Notifications": cb_hdl.settings_notify,
-    "^settings:cancel": cb_hdl.settings_cancel,
-    "^settings:Artificial Intelligence": cb_hdl.settings_ai,
+    "^settings:Currency$": cb_hdl.settings_currency,
+    "^settings:Language$": cb_hdl.settings_language,
+    "^settings:Timezone$": cb_hdl.settings_timezone,
+    "^settings:Timezone:pt2$": cb_hdl.settings_timezone,
+    "^settings:Timezone:reset$": cb_hdl.settings_timezone_reset,
+    "^settings:Timezone:id:": cb_hdl.settings_timezone_confirm,
+    "^settings:Categories$": cb_hdl.settings_categories,
+    "^settings:Notifications$": cb_hdl.settings_notify,
+    "^settings:cancel$": cb_hdl.settings_cancel,
+    "^settings:Artificial Intelligence$": cb_hdl.settings_ai,
     # AI
-    "^settings:ai": cb_hdl.ai_change_status,
+    "^settings:ai$": cb_hdl.ai_change_status,
     # History
-    "^history:cancel": cb_hdl.history_cancel,
-    "^history:window": cb_hdl.history_windows,
-    "^history:back_to_menu": cb_hdl.history_back,
+    "^history:cancel$": cb_hdl.history_cancel,
+    "^history:window:": cb_hdl.history_windows,
+    "^history:back_to_menu$": cb_hdl.history_back,
     # Stats
-    "^stats:cancel": cb_hdl.stats_cancel,
-    "^stats:window": cb_hdl.stats_windows,
-    "^stats:back_to_menu": cb_hdl.stats_back,
+    "^stats:cancel$": cb_hdl.stats_cancel,
+    "^stats:window:": cb_hdl.stats_windows,
+    "^stats:back_to_menu$": cb_hdl.stats_back,
     # Expenses (add, delete)
-    "^expenses:cancel": cb_hdl.cancel_new_expense,
-    "^expenses:category": cb_hdl.expense_confirm_category,
-    "^expenses:delete:cancel": cb_hdl.cancel_expense_deletion,
-    "^expenses:delete:id": cb_hdl.confirm_delete_expense,
+    "^expenses:cancel$": cb_hdl.cancel_new_expense,
+    "^expenses:delete:cancel$": cb_hdl.cancel_expense_deletion,
+    "^expenses:category:": cb_hdl.expense_confirm_category,
+    "^expenses:delete:id:": cb_hdl.confirm_delete_expense,
     # Categories
-    "^categories:menu:cancel": cb_hdl.cancel_mgmt_categories,
-    "^categories:menu:add": cb_hdl.add_category,
-    "^categories:menu:reset": cb_hdl.reset_categories,
-    "^categories:menu:delete": cb_hdl.delete_category,
-    "^categories:delete:back_to_menu": cb_hdl.categories_back_to_menu,
-    "^categories:delete:list": cb_hdl.confirm_delete_category,
+    "^categories:menu:cancel$": cb_hdl.cancel_mgmt_categories,
+    "^categories:menu:add$": cb_hdl.add_category,
+    "^categories:menu:reset$": cb_hdl.reset_categories,
+    "^categories:menu:delete$": cb_hdl.delete_category,
+    "^categories:delete:back_to_menu$": cb_hdl.categories_back_to_menu,
+    "^categories:delete:list:": cb_hdl.confirm_delete_category,
     # Premium
-    "^premium:cancel": cb_hdl.cancel_select_plan,
-    "^premium:select_plan": cb_hdl.confirm_premium_plan,
+    "^premium:cancel$": cb_hdl.cancel_select_plan,
+    "^premium:select_plan:": cb_hdl.confirm_premium_plan,
     # Unknown callback
     "unknown": cb_hdl.unknown_callback,
 }

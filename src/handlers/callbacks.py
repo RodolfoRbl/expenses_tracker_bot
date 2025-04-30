@@ -5,15 +5,8 @@ from telegram.ext import ContextTypes
 
 from utils.general import get_db, get_active_categories
 from utils.stats_format import graph_weekly_expenses
-from utils.dates import parse_timezone
-from utils.keyboards import (
-    get_history_keyboard,
-    get_premium_keyboard,
-    get_stats_keyboard,
-    get_category_mgmt_menu,
-    get_delete_category_keyboard,
-    get_ai_settings_keyboard,
-)
+from utils.dates import parse_timezone, parse_city_timezone
+from utils import keyboards as kb
 from handlers._decorators import rate_counter
 import re
 from config import (
@@ -63,7 +56,7 @@ async def _show_categories_to_manage(update: Update, context: ContextTypes.DEFAU
         await func(
             message,
             parse_mode="HTML",
-            reply_markup=get_category_mgmt_menu(
+            reply_markup=kb.get_category_mgmt_menu(
                 with_add=can_add, with_delete=can_delete, with_reset=not ix_same_default
             ),
         )
@@ -83,14 +76,14 @@ async def _ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = "🟢 AI is currently enabled for your expenses"
     else:
         msg = "🔴 AI is not enabled"
-    await func(msg, reply_markup=get_ai_settings_keyboard(is_ai), parse_mode="HTML")
+    await func(msg, reply_markup=kb.get_ai_settings_keyboard(is_ai), parse_mode="HTML")
 
 
 @rate_counter
 async def help_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.edit_message_text(
-        PREMIUM_TEXT, reply_markup=get_premium_keyboard(), parse_mode="HTML"
+        PREMIUM_TEXT, reply_markup=kb.get_premium_keyboard(), parse_mode="HTML"
     )
 
 
@@ -114,7 +107,33 @@ async def settings_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @rate_counter
 async def settings_timezone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.edit_message_text("Pending logic for handling timezone settings.")
+    is_pt2 = query.data.split(":")[-1] == "pt2"
+    db = get_db(context)
+    tz = db.get_fields(update.effective_user.id, context.bot.id, "user_timezone")
+    tz_city = parse_city_timezone(tz)
+    with_reset = True if tz != "UTC-6" else False
+    await query.edit_message_text(
+        f"Your current timezone: <b>{tz_city}</b>\n\nSelect a timezone:",
+        reply_markup=kb.get_timezone_keyboard(with_reset, next_page=not is_pt2),
+        parse_mode="HTML",
+    )
+
+
+@rate_counter
+async def settings_timezone_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.edit_message_text("✅ Timezone reset to default.")
+    db = get_db(context)
+    db.update_field(update.effective_user.id, context.bot.id, "user_timezone", "UTC-6")
+
+
+@rate_counter
+async def settings_timezone_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    db = get_db(context)
+    tz_id = query.data.split(":")[-1]
+    await query.edit_message_text("✅ Timezone updated successfully.")
+    db.update_field(update.effective_user.id, context.bot.id, "user_timezone", tz_id)
 
 
 @rate_counter
@@ -181,7 +200,7 @@ async def history_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @rate_counter
 async def history_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.edit_message_text(
-        "Select time window for history:", reply_markup=get_history_keyboard()
+        "Select time window for history:", reply_markup=kb.get_history_keyboard()
     )
 
 
@@ -191,7 +210,8 @@ async def history_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     window = query.data.split(":")[-1]
     user_id = str(query.from_user.id)
-    tz = parse_timezone("UTC-6")
+    str_tz = db.get_fields(user_id, context.bot.id, "user_timezone")
+    tz = parse_timezone(str_tz)
     today_dt = datetime.now(tz)
 
     start_dt = {
@@ -241,7 +261,7 @@ async def history_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"📅 <b>History for {window}</b>:\n\n{history}",
             parse_mode="HTML",
-            reply_markup=get_history_keyboard(is_back_button=True),
+            reply_markup=kb.get_history_keyboard(is_back_button=True),
         )
     except Exception as e:
         await query.edit_message_text(f"Error fetching history: {str(e)}")
@@ -261,7 +281,7 @@ async def stats_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @rate_counter
 async def stats_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.edit_message_text(
-        "Select time period:", reply_markup=get_stats_keyboard()
+        "Select time period:", reply_markup=kb.get_stats_keyboard()
     )
 
 
@@ -271,7 +291,8 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     stats_window = query.data.split(":")[-1]
     user_id = str(query.from_user.id)
-    tz = parse_timezone("UTC-6")
+    str_tz = db.get_fields(user_id, context.bot.id, "user_timezone")
+    tz = parse_timezone(str_tz)
     today_dt = datetime.now(tz)
     try:
         time_windows = {
@@ -315,7 +336,11 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "This Year": "monthly",
             "All Time": "monthly",
         }
-        msg = graph_weekly_expenses(exp, window=_map[stats_window], max_bars=10)
+        if exp:
+            msg = graph_weekly_expenses(exp, window=_map[stats_window], max_bars=10)
+        else:
+            msg = "No expenses to show.\n"
+
         sign = "-" if exp_total > inc_total else "+"
         net = exp_total - inc_total
         await query.edit_message_text(
@@ -327,7 +352,7 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>"
             ),
             parse_mode="HTML",
-            reply_markup=get_stats_keyboard(is_back_button=True),
+            reply_markup=kb.get_stats_keyboard(is_back_button=True),
         )
 
     except Exception as e:
@@ -352,9 +377,12 @@ async def expense_confirm_category(update: Update, context: ContextTypes.DEFAULT
     user_id = str(query.from_user.id)
     cat_id = query.data.split(":")[-1]
     try:
-        _data = db.get_fields(user_id, context.bot.id, ["temp_data", "categories"])  # Get temp data
-        state = _data["temp_data"]
-        cats = _data["categories"]
+        _data = db.get_fields(
+            user_id, context.bot.id, ["temp_data", "categories", "user_timezone"]
+        )  # Get temp data
+        state = _data.get("temp_data")
+        cats = _data.get("categories")
+        tz = _data.get("user_timezone")
         if not state:
             await query.edit_message_text("No pending expense or income to log.")
             return
@@ -374,13 +402,10 @@ async def expense_confirm_category(update: Update, context: ContextTypes.DEFAULT
             currency="USD",  # Default currency
             description=description,
             income=is_income,
+            timezone=tz,
         )
-        # Remove temp data
-        db.users_table.update_item(
-            Key={"user_id": user_id, "bot_id": str(context.bot.id)},
-            UpdateExpression="SET temp_data = :tmp_data",
-            ExpressionAttributeValues={":tmp_data": {}},
-        )
+        # Reset temp data
+        db.update_field(user_id, context.bot.id, "temp_data", {})
     except Exception as e:
         await query.edit_message_text(f"Error inserting record: {str(e)}")
 
@@ -510,7 +535,7 @@ async def delete_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not re.match(r"(?i).*(income|other)$", v["name"])
         }
         await query.edit_message_text(
-            "Select a category to delete:", reply_markup=get_delete_category_keyboard(cats)
+            "Select a category to delete:", reply_markup=kb.get_delete_category_keyboard(cats)
         )
     except Exception as e:
         await query.edit_message_text(f"Error fetching categories: {str(e)}")

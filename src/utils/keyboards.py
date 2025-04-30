@@ -5,6 +5,7 @@ from config import (
     MAIN_MENU,
     SETTINGS_OPTIONS,
 )
+from utils.dates import get_time_all_zones
 
 
 def build_menu(buttons, n_cols=2):
@@ -118,3 +119,28 @@ def get_ai_settings_keyboard(is_ai_enabled: bool):
         btn = [InlineKeyboardButton("🧠 Enable AI", callback_data="settings:ai:enable")]
     btn.append(InlineKeyboardButton("❌ Cancel", callback_data="settings:cancel"))
     return build_menu(btn, n_cols=1)
+
+
+def get_timezone_keyboard(with_reset, next_page):
+    """
+    Returns a keyboard with timezones for the settings menu.
+    """
+    # Define which list to show
+    tz_its = get_time_all_zones().items()
+    half = len(tz_its) // 2
+    if next_page:
+        tz_its = list(tz_its)[:half]
+    else:
+        tz_its = list(tz_its)[half:]
+    buttons = [
+        InlineKeyboardButton(tz_cities, callback_data=f"settings:Timezone:id:{tz_id}")
+        for tz_id, tz_cities in tz_its
+    ]
+    if not next_page:
+        buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data="settings:Timezone"))
+    else:
+        buttons.append(InlineKeyboardButton("➡️ Next", callback_data="settings:Timezone:pt2"))
+    if with_reset:
+        buttons.append(InlineKeyboardButton("🔃 Reset", callback_data="settings:Timezone:reset"))
+    buttons.append(InlineKeyboardButton("❌ Cancel", callback_data="settings:cancel"))
+    return build_menu(buttons, n_cols=1)

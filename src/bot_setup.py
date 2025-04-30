@@ -22,6 +22,7 @@ async def setup(*tokens):
             BotCommand("premium", "View premium benefits"),
             BotCommand("history", "Show all records"),
             BotCommand("delete", "Delete a recent record"),
+            BotCommand("artificial_intelligence", "View AI Status"),
             BotCommand("settings", "Custom settings ⭐️"),
             BotCommand("categories", "Manage your categories ⭐️"),
             BotCommand("export", "Download history for Excel ⭐️"),

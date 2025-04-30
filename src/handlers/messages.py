@@ -34,6 +34,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"✅ Logged: <b>${amount:,.2f}</b> in <b>💰 Income</b>", parse_mode="HTML"
             )
+            tz = db.get_fields(user_id, context.bot.id, "user_timezone")
             db.insert_expense(
                 user_id=user_id,
                 amount=amount,
@@ -41,16 +42,18 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 currency="USD",
                 description=description,
                 income=is_income,
+                timezone=tz,
             )
         except Exception as e:
             await update.message.reply_text(f"Error inserting income: {str(e)}")
     else:
         try:
             fields = db.get_fields(
-                user_id, context.bot.id, ["artificial_intelligence", "categories"]
+                user_id, context.bot.id, ["artificial_intelligence", "categories", "user_timezone"]
             )
             is_ai_enabled = fields.get("artificial_intelligence")
             cats: dict = fields.get("categories")
+            tz = fields.get("user_timezone")
             act_cats = {k: v["name"] for k, v in cats.items() if v["active"] == 1}
             inverted_cats = {v: k for k, v in act_cats.items()}
             # Get the category ID for "Other" category
@@ -80,6 +83,7 @@ async def _msg_regular(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     currency="USD",
                     description=description,
                     income=is_income,
+                    timezone=tz,
                 )
             else:
                 act_cats = get_active_categories(db, user_id, context.bot.id)

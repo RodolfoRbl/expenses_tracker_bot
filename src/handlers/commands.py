@@ -14,6 +14,7 @@ from handlers.callbacks import _show_categories_to_manage
 from utils.dates import parse_timezone, get_str_timestamp
 
 from handlers._decorators import rate_counter
+from handlers.callbacks import _ai_handler
 from datetime import datetime
 import csv
 import io
@@ -59,7 +60,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "last_active": curr_time,
                 "daily_requests": 0,
                 "total_requests": 0,  # It is handled after all handlers
-                "timezone": "UTC-6",
+                "user_timezone": "UTC-6",
                 "categories": DEFAULT_CATEGORIES,
                 "lang": "EN",
                 "budget": 0,
@@ -195,6 +196,11 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @rate_counter
 async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+
+
+@rate_counter
+async def cmd_ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _ai_handler(update, context)
 
 
 @rate_counter
