@@ -244,6 +244,33 @@ class ExpenseDB:
             ExpressionAttributeValues={":val": value},
         )
 
+    def update_multiple_fields(self, user_id: str, bot_id: str, updates: dict[str, Any]) -> None:
+        update_expr_parts = []
+        expr_attr_names = {}
+        expr_attr_values = {}
+
+        for i, (key, val) in enumerate(updates.items()):
+            placeholder_name = f"#f{i}"
+            placeholder_value = f":val{i}"
+            update_expr_parts.append(f"{placeholder_name} = {placeholder_value}")
+            expr_attr_names[placeholder_name] = key
+            expr_attr_values[placeholder_value] = val
+
+        update_expression = "SET " + ", ".join(update_expr_parts)
+        print("-" * 20)
+        print(update_expression)
+        print("-" * 20)
+        print(expr_attr_names)
+        print("-" * 20)
+        print(expr_attr_values)
+        print("-" * 20)
+        self.users_table.update_item(
+            Key={"user_id": str(user_id), "bot_id": str(bot_id)},
+            UpdateExpression=update_expression,
+            ExpressionAttributeNames=expr_attr_names,
+            ExpressionAttributeValues=expr_attr_values,
+        )
+
 
 if __name__ == "__main__":
     db = ExpenseDB(region_name="eu-central-1")
