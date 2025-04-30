@@ -15,6 +15,7 @@ from config import (
     PREMIUM_PRICES,
     STARS_TO_USD,
     MAX_CATEGORIES,
+    MAX_CAT_LENGTH,
     ST_WAIT_CATEGORY,
     CMD_FOR_PREMIUM_TEXT,
 )
@@ -499,7 +500,7 @@ async def add_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     db = get_db(context)
     await query.edit_message_text(
-        "Please send the name of the new category. It should be unique and not exceed 20 characters."
+        f"Please send the name of the new category. It should be unique and not exceed {MAX_CAT_LENGTH} characters."
     )
     db.update_field(
         update.effective_user.id, context.bot.id, "conversation_status", ST_WAIT_CATEGORY

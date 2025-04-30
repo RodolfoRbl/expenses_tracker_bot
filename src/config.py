@@ -38,7 +38,7 @@ SETTINGS_OPTIONS = [
 ]
 
 
-MAX_CATEGORIES = 15
+MAX_CATEGORIES = 20
 MAX_CAT_LENGTH = 30
 
 # Conversation status
