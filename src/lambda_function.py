@@ -17,6 +17,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
+    PreCheckoutQueryHandler,
     filters,
 )
 from telegram import Update
@@ -25,6 +26,7 @@ from handlers import (
     callbacks as cb_hdl,
     admins as ad_hdl,
     messages as msg_hdl,
+    payments as pm_hdl
 )
 from utils.db import ExpenseDB
 from utils.llm import AIClient
@@ -132,6 +134,9 @@ callback_queries = {
 for pattern, handler in callback_queries.items():
     app.add_handler(CallbackQueryHandler(handler, pattern))
 
+# Payments
+app.add_handler(PreCheckoutQueryHandler(pm_hdl.pre_checkout_handler))
+app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, pm_hdl.successful_payment_handler))
 
 app.add_handler(MessageHandler(filters.COMMAND, cm_hdl.unknown_command_handler))
 
