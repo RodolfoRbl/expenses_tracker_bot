@@ -187,7 +187,7 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_document(
             document=io.BytesIO(output.getvalue().encode()),
             filename=f"expenses_{file_dt}.csv",
-            caption="✅ Your export is ready!",
+            caption="✅ Your export is ready! You can open it in Excel, Google Sheets or any other spreadsheet software.",
         )
     except Exception as e:
         await update.message.reply_text(f"Error exporting data: {str(e)}")
