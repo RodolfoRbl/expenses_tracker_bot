@@ -13,7 +13,7 @@ from utils.general import truncate, get_db
 from handlers.callbacks import _show_categories_to_manage
 from utils.dates import parse_timezone, get_str_timestamp
 
-from handlers._decorators import rate_counter
+from handlers._decorators import rate_counter, check_premium_or_admin
 from handlers.callbacks import _ai_handler
 from datetime import datetime
 import csv
@@ -56,6 +56,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "language_code": update.effective_user.language_code or "",
                 "is_premium": False,
                 "end_premium": "",
+                "premium_plan": "",
                 "joined_at": curr_time,
                 "last_active": curr_time,
                 "daily_requests": 0,
@@ -131,30 +132,21 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @rate_counter
+@check_premium_or_admin
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    is_admin = user_id in context.bot_data.get("admins", [])
-    if is_admin:
-        await update.message.reply_text(
-            CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
-        )
-        return
-    else:
-        is_premium = get_db(context).get_fields(user_id, context.bot.id, "is_premium")
-        if is_premium:
-            await update.message.reply_text(
-                CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
-            )
-        else:
-            await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+    await update.message.reply_text(
+        CMD_PREMIUM_WELCOME_TEXT, parse_mode="HTML", reply_markup=get_settings_keyboard()
+    )
 
 
 @rate_counter
+@check_premium_or_admin
 async def categories_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _show_categories_to_manage(update, context)
 
 
 @rate_counter
+@check_premium_or_admin
 async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = get_db(context)
     user_id = str(update.effective_user.id)
@@ -194,11 +186,13 @@ async def export_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @rate_counter
+@check_premium_or_admin
 async def budget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
 
 
 @rate_counter
+@check_premium_or_admin
 async def cmd_ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _ai_handler(update, context)
 

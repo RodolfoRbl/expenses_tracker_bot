@@ -2,6 +2,9 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from functools import wraps
 from utils.rate_limiter import RateLimiter
+from datetime import datetime, timezone
+from config import CMD_FOR_PREMIUM_TEXT
+from utils.general import get_db
 
 
 def rate_counter(func):
@@ -46,5 +49,41 @@ def admin_only(func):
             await func(update, context)
         else:
             await update.message.reply_text("⛔ This command is only for admins.")
+
+    return wrapper
+
+
+def check_premium_or_admin(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.callback_query:
+            ans_func = update.callback_query.edit_message_text
+        else:
+            ans_func = update.message.reply_text
+
+        if update.effective_user.id in context.bot_data.get("admins", []):
+            await func(update, context)
+        else:
+            db = get_db(context)
+            fields = db.get_fields(
+                update.effective_user.id, context.bot.id, ["is_premium", "end_premium"]
+            )
+            is_premium = fields.get("is_premium")
+            end_premium = fields.get("end_premium")
+            current_time = datetime.now(timezone.utc).timestamp()
+            if not is_premium:
+                await ans_func(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+            elif is_premium and end_premium < current_time:
+                db.update_multiple_fields(
+                    update.effective_user.id,
+                    context.bot.id,
+                    {
+                        "is_premium": False,
+                        "end_premium": "",
+                        "premium_plan": "",
+                    },
+                )
+            else:
+                await func(update, context)
 
     return wrapper

@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import ContextTypes
 
@@ -7,7 +6,7 @@ from utils.general import get_db, get_active_categories
 from utils.stats_format import graph_weekly_expenses
 from utils.dates import parse_timezone, parse_city_timezone
 from utils import keyboards as kb
-from handlers._decorators import rate_counter
+from handlers._decorators import rate_counter, check_premium_or_admin
 import re
 from config import (
     DEFAULT_CATEGORIES,
@@ -17,7 +16,6 @@ from config import (
     MAX_CATEGORIES,
     MAX_CAT_LENGTH,
     ST_WAIT_CATEGORY,
-    CMD_FOR_PREMIUM_TEXT,
 )
 
 
@@ -138,23 +136,15 @@ async def settings_timezone_confirm(update: Update, context: ContextTypes.DEFAUL
 
 
 @rate_counter
+@check_premium_or_admin
 async def settings_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _show_categories_to_manage(update, context)
 
 
 @rate_counter
+@check_premium_or_admin
 async def settings_ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    is_admin = update.effective_user.id in context.bot_data.get("admins", [])
-    if is_admin:
-        await _ai_handler(update, context)
-    else:
-        is_premium = get_db(context).get_fields(
-            update.effective_user.id, context.bot.id, "is_premium"
-        )
-        if is_premium:
-            await _ai_handler(update, context)
-        else:
-            update.message.reply_text(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
+    await _ai_handler(update, context)
 
 
 @rate_counter
@@ -463,7 +453,7 @@ async def confirm_premium_plan(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.message.reply_invoice(
             title=f"Fundu Premium - {_months} month{_plural} plan",
             description=f"\n${STARS_TO_USD[price]} USD - Fundu Premium for {_months} month{_plural}\n",
-            payload=f"invoice_subs_{plan}",
+            payload=f"plan_{plan}",
             currency="XTR",
             provider_token="",
             prices=price_list,
