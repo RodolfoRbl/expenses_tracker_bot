@@ -257,13 +257,6 @@ class ExpenseDB:
             expr_attr_values[placeholder_value] = val
 
         update_expression = "SET " + ", ".join(update_expr_parts)
-        print("-" * 20)
-        print(update_expression)
-        print("-" * 20)
-        print(expr_attr_names)
-        print("-" * 20)
-        print(expr_attr_values)
-        print("-" * 20)
         self.users_table.update_item(
             Key={"user_id": str(user_id), "bot_id": str(bot_id)},
             UpdateExpression=update_expression,

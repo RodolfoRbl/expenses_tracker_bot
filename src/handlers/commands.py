@@ -15,6 +15,7 @@ from utils.dates import parse_timezone, get_str_timestamp
 
 from handlers._decorators import rate_counter, check_premium_or_admin
 from handlers.callbacks import _ai_handler
+from handlers.payments import _activate_premium_plan
 from datetime import datetime
 import csv
 import io
@@ -84,11 +85,28 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @rate_counter
 async def premium_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        PREMIUM_TEXT,
-        reply_markup=get_premium_keyboard(),
-        parse_mode="HTML",
-    )
+    if not context.args:
+        await update.message.reply_text(
+            PREMIUM_TEXT,
+            reply_markup=get_premium_keyboard(),
+            parse_mode="HTML",
+        )
+        return
+    value = context.args[0].lower()
+    if value == context.bot_data["special_prefix"] + ":" + "deactivate":
+        db = get_db(context)
+        db.update_multiple_fields(
+            update.effective_user.id,
+            context.bot.id,
+            {
+                "is_premium": False,
+                "end_premium": "",
+                "premium_plan": "",
+            },
+        )
+        await update.message.reply_text("✅ Premium deactivated.")
+    elif value.startswith(context.bot_data["special_prefix"] + ":"):
+        await _activate_premium_plan(update, context, f"plan_{value.split(':')[-1]}")
 
 
 @rate_counter

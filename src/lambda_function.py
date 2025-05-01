@@ -26,7 +26,7 @@ from handlers import (
     callbacks as cb_hdl,
     admins as ad_hdl,
     messages as msg_hdl,
-    payments as pm_hdl
+    payments as pm_hdl,
 )
 from utils.db import ExpenseDB
 from utils.llm import AIClient
@@ -34,6 +34,7 @@ from utils.llm import AIClient
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))
 LLM_API_KEY = os.getenv("LLM_API_KEY")
+SPECIAL_PREFIX = os.getenv("SPECIAL_PREFIX")
 REQUESTS_PER_DAY = 100
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -47,6 +48,7 @@ app.bot_data.update(
         "admins": {int(i) for i in os.getenv("ADMINS", "").split(",") if i.isdigit()},
         "owner": MY_CHAT_ID,
         "requests_per_day": REQUESTS_PER_DAY,
+        "special_prefix": SPECIAL_PREFIX,
     }
 )
 

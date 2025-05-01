@@ -70,7 +70,7 @@ def check_premium_or_admin(func):
             )
             is_premium = fields.get("is_premium")
             end_premium = fields.get("end_premium")
-            current_time = datetime.now(timezone.utc).timestamp()
+            current_time = str(int(datetime.now(timezone.utc).timestamp()))
             if not is_premium:
                 await ans_func(CMD_FOR_PREMIUM_TEXT, parse_mode="HTML")
             elif is_premium and end_premium < current_time:
