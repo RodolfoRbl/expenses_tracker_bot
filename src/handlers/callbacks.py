@@ -6,6 +6,7 @@ from utils.general import get_db, get_active_categories
 from utils.stats_format import graph_weekly_expenses
 from utils.dates import parse_timezone, parse_city_timezone
 from utils import keyboards as kb
+from utils.db import ExpenseDB
 from handlers._decorators import rate_counter, check_premium_or_admin
 import re
 from config import (
@@ -84,6 +85,78 @@ async def help_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         PREMIUM_TEXT, reply_markup=kb.get_premium_keyboard(), parse_mode="HTML"
     )
+
+
+async def _get_stats_report(
+    db: ExpenseDB, window: str, user_id: str, bot_id: str, cutoff_date=None
+):
+    stats_window = window
+    str_tz = db.get_fields(user_id, bot_id, "user_timezone")
+    tz = parse_timezone(str_tz)
+    if cutoff_date is not None:
+        try:
+            today_dt = datetime.strptime(cutoff_date, "%Y-%m-%d")
+        except ValueError as e:
+            return f"Invalid cutoff date format: {str(e)}"
+    else:
+        today_dt = datetime.now(tz)
+    try:
+        time_windows = {
+            "Today": (today_dt, today_dt),
+            "This Week": (today_dt - timedelta(days=today_dt.weekday()), today_dt),
+            "This Month": (today_dt.replace(day=1), today_dt),
+            "This Year": (today_dt.replace(month=1, day=1), today_dt),
+            "All Time": (today_dt.replace(year=1900), today_dt),
+        }
+
+        if stats_window in time_windows:
+            start_date, end_date = time_windows[stats_window]
+            data = db.fetch_expenses_by_user_and_date(user_id, start_date, end_date)
+        else:
+            return f"Invalid time window: {stats_window}"
+
+        if not data:
+            return "No records found for the selected time window."
+
+        cats = db.get_fields(user_id, bot_id, "categories")
+        exp = []
+        inc = []
+        exp_total = 0
+        inc_total = 0
+        for i in data:
+            i["category"] = cats[i["category"]]["name"]
+            if not re.search(r"(?i).*income", i["category"]):
+                exp.append(i)
+                exp_total += i["amount"]
+                exp
+            else:
+                inc.append(i)
+                inc_total += i["amount"]
+
+        _map = {
+            "Today": "daily",
+            "This Week": "daily",
+            "This Month": "daily",
+            "This Year": "monthly",
+            "All Time": "monthly",
+        }
+        if exp:
+            msg = graph_weekly_expenses(exp, window=_map[stats_window], max_bars=10)
+        else:
+            msg = "No expenses to show.\n"
+
+        sign = "-" if exp_total > inc_total else "+"
+        net = exp_total - inc_total
+        return f"""
+                📊 <b>Stats for {stats_window}</b>:\n
+<b>➖ Expenses</b>\n\n{msg}\n
+<b>Total Expenses: <code>${exp_total:,.2f}</code></b> ({len(exp)})\n
+<b>Total Income: <code>${inc_total:,.2f}</code></b> ({len(inc)})\n\n
+<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>
+                """
+
+    except Exception as e:
+        return f"Error fetching history: {str(e)}"
 
 
 # ##############################################################
@@ -282,72 +355,12 @@ async def stats_windows(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     stats_window = query.data.split(":")[-1]
     user_id = str(query.from_user.id)
-    str_tz = db.get_fields(user_id, context.bot.id, "user_timezone")
-    tz = parse_timezone(str_tz)
-    today_dt = datetime.now(tz)
-    try:
-        time_windows = {
-            "Today": (today_dt, today_dt),
-            "This Week": (today_dt - timedelta(days=today_dt.weekday()), today_dt),
-            "This Month": (today_dt.replace(day=1), today_dt),
-            "This Year": (today_dt.replace(month=1, day=1), today_dt),
-            "All Time": (today_dt.replace(year=1900), today_dt),
-        }
-
-        if stats_window in time_windows:
-            start_date, end_date = time_windows[stats_window]
-            data = db.fetch_expenses_by_user_and_date(user_id, start_date, end_date)
-        else:
-            await query.edit_message_text(f"Invalid time window: {stats_window}")
-            return
-
-        if not data:
-            await query.edit_message_text("No records found for the selected time window.")
-            return
-
-        cats = db.get_fields(user_id, context.bot.id, "categories")
-        exp = []
-        inc = []
-        exp_total = 0
-        inc_total = 0
-        for i in data:
-            i["category"] = cats[i["category"]]["name"]
-            if not re.search(r"(?i).*income", i["category"]):
-                exp.append(i)
-                exp_total += i["amount"]
-                exp
-            else:
-                inc.append(i)
-                inc_total += i["amount"]
-
-        _map = {
-            "Today": "daily",
-            "This Week": "daily",
-            "This Month": "daily",
-            "This Year": "monthly",
-            "All Time": "monthly",
-        }
-        if exp:
-            msg = graph_weekly_expenses(exp, window=_map[stats_window], max_bars=10)
-        else:
-            msg = "No expenses to show.\n"
-
-        sign = "-" if exp_total > inc_total else "+"
-        net = exp_total - inc_total
-        await query.edit_message_text(
-            (
-                f"📊 <b>Stats for {stats_window}</b>:\n\n"
-                f"<b>➖ Expenses</b>\n\n{msg}\n"
-                f"<b>Total Expenses: <code>${exp_total:,.2f}</code></b> ({len(exp)})\n"
-                f"<b>Total Income: <code>${inc_total:,.2f}</code></b> ({len(inc)})\n\n"
-                f"<b>Total Net: <code>{sign}${abs(net):,.2f}</code></b>"
-            ),
-            parse_mode="HTML",
-            reply_markup=kb.get_stats_keyboard(is_back_button=True),
-        )
-
-    except Exception as e:
-        await query.edit_message_text(f"Error fetching history: {str(e)}")
+    msg = await _get_stats_report(db, stats_window, user_id, context.bot.id)
+    await query.edit_message_text(
+        msg,
+        parse_mode="HTML",
+        reply_markup=kb.get_stats_keyboard(is_back_button=True),
+    )
 
 
 # ##############################################################

@@ -27,6 +27,7 @@ from handlers import (
     admins as ad_hdl,
     messages as msg_hdl,
     payments as pm_hdl,
+    scheduled as sch_hdl,
 )
 from utils.db import ExpenseDB
 from utils.llm import AIClient
@@ -147,12 +148,18 @@ is_initialized = None
 
 async def main(event):
     global is_initialized
+    scheduler = event.get("schedule", None)
     try:
         if not is_initialized:
             await app.initialize()
             is_initialized = True
-        update = Update.de_json(json.loads(event["body"]), app.bot)
-        await app.process_update(update)
+        if scheduler == "monthly":
+            await sch_hdl.send_monthly_report(app.bot, db)
+        elif scheduler == "daily":
+            await sch_hdl.send_daily_reminder(app.bot, db)
+        else:
+            update = Update.de_json(json.loads(event["body"]), app.bot)
+            await app.process_update(update)
     except Exception as e:
         single_msg(f"ERROR in main: {str(e)}", BOT_TOKEN, MY_CHAT_ID)
     return {"statusCode": 200, "body": "Success"}

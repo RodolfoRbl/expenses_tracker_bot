@@ -66,6 +66,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "categories": DEFAULT_CATEGORIES,
                 "lang": "EN",
                 "budget": 0,
+                "daily_reminders": True,
                 "currency": "USD",
                 "temp_data": {},
                 "conversation_status": ST_REGULAR,

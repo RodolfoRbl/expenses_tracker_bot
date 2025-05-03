@@ -219,6 +219,20 @@ class ExpenseDB:
                 {"AttributeName": "user_id", "AttributeType": "S"},
                 {"AttributeName": "bot_id", "AttributeType": "S"},
             ],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "bot_id-index",
+                    "KeySchema": [
+                        {"AttributeName": "bot_id", "KeyType": "HASH"},
+                        {"AttributeName": "user_id", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {
+                        "ReadCapacityUnits": 1,
+                        "WriteCapacityUnits": 1,
+                    },
+                }
+            ],
             ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
         )
 
@@ -235,6 +249,18 @@ class ExpenseDB:
                 ":now": get_str_timestamp(),
             },
         )
+
+    def get_fields_by_bot(self, bot_id: str, fields=["user_id"]) -> List[Dict[str, Any]]:
+        response = self.users_table.query(
+            IndexName="bot_id-index",
+            KeyConditionExpression=Key("bot_id").eq(str(bot_id)),
+            ProjectionExpression=", ".join(fields),
+        )
+        item = response.get("Item", {})
+
+        if len(fields) == 1:
+            return item.get(fields[0])
+        return item
 
     def update_field(self, user_id: str, bot_id: str, field: str, value: Any) -> None:
         self.users_table.update_item(
