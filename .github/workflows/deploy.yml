@@ -9,7 +9,7 @@ env:
   AWS_REGION: eu-central-1
   FUNCTION_NAME: ai_expenses_bot_v2
   LAYER_NAME: telegram-bot-layer
-  TIMEOUT: 10
+  TIMEOUT: 60
   MEMORY_SIZE: 384
 
 jobs:
