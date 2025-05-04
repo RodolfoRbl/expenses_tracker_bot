@@ -154,8 +154,10 @@ async def main(event):
             await app.initialize()
             is_initialized = True
         if scheduler == "monthly":
+            print("Sending MONTHLY reminders...")
             await sch_hdl.send_monthly_report(app.bot, db)
         elif scheduler == "daily":
+            print("Sending DAILY reminders...")
             await sch_hdl.send_daily_reminder(app.bot, db)
         else:
             update = Update.de_json(json.loads(event["body"]), app.bot)

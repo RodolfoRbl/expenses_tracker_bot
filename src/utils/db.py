@@ -256,11 +256,8 @@ class ExpenseDB:
             KeyConditionExpression=Key("bot_id").eq(str(bot_id)),
             ProjectionExpression=", ".join(fields),
         )
-        item = response.get("Item", {})
-
-        if len(fields) == 1:
-            return item.get(fields[0])
-        return item
+        items = response.get("Items", {})
+        return items
 
     def update_field(self, user_id: str, bot_id: str, field: str, value: Any) -> None:
         self.users_table.update_item(
