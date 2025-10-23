@@ -3,7 +3,6 @@ import requests as rq
 
 
 class Bot:
-
     def __init__(self, token):
         self.endpoint = f"https://api.telegram.org/bot{token}/"
 
@@ -35,14 +34,18 @@ class Bot:
         datos = {"chat_id": chat_id}
         datos.update(kwargs)
         with open(photo, "rb") as imagen:
-            response = rq.post(self.endpoint + "sendPhoto", data=datos, files={"photo": imagen}).json()
+            response = rq.post(
+                self.endpoint + "sendPhoto", data=datos, files={"photo": imagen}
+            ).json()
         return response
 
     def answerCallbackQuery(self, callback_query_id):
         return self.post("answerCallbackQuery", callback_query_id=str(callback_query_id))
 
     def answerPreCheckoutQuery(self, pre_checkout_query_id, ok=True):
-        return self.post("answerPreCheckoutQuery", pre_checkout_query_id=str(pre_checkout_query_id), ok=True)
+        return self.post(
+            "answerPreCheckoutQuery", pre_checkout_query_id=str(pre_checkout_query_id), ok=True
+        )
 
     def editMessageText(self, user_id, callback_message_id, text, **kwargs):
         params = {"chat_id": user_id, "message_id": callback_message_id, "text": text}
@@ -68,8 +71,9 @@ class Bot:
         new = [i for i in actual_commands if i["command"] not in commands]
         self.post("setMyCommands", commands=json.dumps(new))
 
-    def sendInvoice(self, chat_id, title, description, payload, provider_token, currency, label, price, **kwargs):
-
+    def sendInvoice(
+        self, chat_id, title, description, payload, provider_token, currency, label, price, **kwargs
+    ):
         params = {
             "chat_id": chat_id,
             "title": title,

@@ -3,7 +3,6 @@ from gspread import service_account_from_dict
 
 class Spreadsheet:
     def __init__(self, file, sheet, creds_dict) -> None:
-
         self.file = file
         self.sheet = sheet
 
@@ -20,10 +19,10 @@ class Spreadsheet:
                 return i
         return max_row + 1
 
-    def get_all_values(self, start_row=13, end_row=None) -> list[list[str]]:
+    def get_all_values(self, start_row=13, end_row=None, **kwargs) -> list[list[str]]:
         array = []
         last = end_row or self.get_next_available_row()
-        for record in self.wks.get(f"A{start_row}:C{last}"):
+        for record in self.wks.get(f"A{start_row}:C{last}", **kwargs):
             array.append(record)
         return array
 
@@ -59,3 +58,29 @@ class Spreadsheet:
             self.wks.update_cells(cell_list, value_input_option="USER_ENTERED")
         except Exception as e:
             print(f"An error occurred: {e}")
+
+    def get_month_total(self, start_row=16, month=None, year=None):
+        """
+        Calculate total expenses for a specific month
+        """
+        from datetime import datetime, timedelta
+
+        if not month or not year:
+            today = datetime.now()
+            month = today.month
+            year = today.year
+
+        total = 0
+        records = self.get_all_values(start_row=start_row, value_render_option="UNFORMATTED_VALUE")
+
+        for record in records:
+            try:
+                days_since_base = int(record[2])
+                base_date = datetime(1899, 12, 30)
+                date = base_date + timedelta(days=days_since_base)
+                if date.month == month and date.year == year:
+                    total += record[1]
+            except (ValueError, IndexError):
+                continue
+
+        return total

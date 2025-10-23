@@ -1,7 +1,11 @@
+import os
+import json
 import re
+from datetime import datetime
 from base.update import Update
 from base.utils import get_mx_time
 from base.google_spreadsheets import Spreadsheet
+from config import HTML
 
 # ###########################################################################################
 # ################################# C O M A N D S ############################################
@@ -30,7 +34,7 @@ def cmd_get_debt(update: Update, sh: Spreadsheet):
         if mensaje != "":
             update.sendMessage(mensaje)
         else:
-            update.sendMessage("Sin registros de deuda")
+            update.sendMessage("No debt records found")
     except Exception as e:
         update.sendMessage(str(e))
 
@@ -40,7 +44,8 @@ def cmd_delete_debt_record(update: Update, sh: Spreadsheet):
         last_data = sh.get_next_empty_row(start_row=2, max_row=14) - 1
         range_str = f"A{last_data}:C{last_data}"
         datos = sh.wks.get(range_str)
-        mensaje = f"The row {last_data} has been cleared\n{'-'*60}\n{sh.clean_record_output(datos)}"
+        msg = f"The row {last_data} has been cleared"
+        mensaje = f"{msg}\n{'-'*len(msg)}\n{sh.clean_record_output(datos)}"
         update.sendMessage(mensaje)
         sh.clear_range(range_str)
     except Exception as e:
@@ -70,19 +75,17 @@ def cmd_add_debt_record(update: Update, sh: Spreadsheet):
             else:
                 update.sendMessage("No hay espacio para agregar la deuda")
         else:
-            update.sendMessage("Patron no reconocido")
+            update.sendMessage("Unrecognized pattern")
     except Exception as e:
         Update.sendMessage(str(e))
 
 
 def cmd_find_pattern(update: Update, sh: Spreadsheet):
     try:
-        pattern = (
-            update.text.split(maxsplit=1)[1] if len(update.text.split()) > 1 else None
-        )
+        pattern = update.text.split(maxsplit=1)[1] if len(update.text.split()) > 1 else None
 
         if not pattern:
-            update.sendMessage("Falta el patrón de búsqueda")
+            update.sendMessage("Missing search pattern")
             return
 
         # Get all records in the spreadsheet
@@ -105,7 +108,7 @@ def cmd_find_pattern(update: Update, sh: Spreadsheet):
             msg = sh.clean_record_output(msg)
             update.sendMessage(msg)
         else:
-            update.sendMessage("Sin resultados")
+            update.sendMessage("No results found")
     except Exception as e:
         update.sendMessage(str(e))
 
@@ -116,6 +119,50 @@ def cmd_delete_last_record(update: Update, sh: Spreadsheet) -> str:
     mensaje = f"The row {last_data} has been cleared\n{'-'*60}\n{sh.clean_record_output(datos)}"
     update.sendMessage(mensaje)
     sh.wks.delete_rows(last_data)
+
+
+def cmd_show_menu(update: Update, sh: Spreadsheet):
+    """Show the main menu with expense tracking options"""
+
+    buttons = [
+        [
+            {"text": "📊 Month Total", "callback_data": "month_total"},
+        ],
+        [
+            {"text": "💰 Last 5", "callback_data": "last_records"},
+            {"text": "🔍 Search", "callback_data": "search"},
+        ],
+        [
+            {"text": "💳 Debt", "callback_data": "debt_summary"},
+            {"text": "❌ Delete", "callback_data": "delete_last"},
+        ],
+    ]
+
+    markup = json.dumps({"inline_keyboard": buttons})
+    update.sendMessage("Choose an option:", reply_markup=markup)
+
+
+def handle_callback_query(update: Update, sh: Spreadsheet):
+    """Handle callback queries from inline keyboard buttons"""
+    query_data = update.callback_data
+    update.answerCallbackQuery()
+
+    if query_data == "month_total":
+        total = sh.get_month_total()
+        current_month = datetime.now().strftime("%B %Y")
+        update.sendMessage(f"Total expenses for {current_month}: ${total:,.2f}")
+
+    elif query_data == "last_records":
+        cmd_last_records(update, sh)
+
+    elif query_data == "search":
+        update.sendMessage("Send /find followed by the text you want to search")
+
+    elif query_data == "debt_summary":
+        cmd_get_debt(update, sh)
+
+    elif query_data == "delete_last":
+        cmd_delete_last_record(update, sh)
 
 
 # ############################################################################################
@@ -151,34 +198,36 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
     numero_primero = re.findall("^\d+(\.\d+)?$", info_split[0])
     numero_final = re.findall("^\d+(\.\d+)?$", info_split[-1])
     lwr_txt = update.text.lower()
-    shortcuts = {"mb": 6, "m": 5}
-    short_desc = {"t": "Tienda", "tc": "Tacos"}
+    all_shortcuts = json.loads(os.getenv("EXPENSES_SHORTCUTS", "{}"))
+    short_desc = {k: v for k, v in all_shortcuts.items() if isinstance(v, str)}
+    shortcuts = {k: v for k, v in all_shortcuts.items() if isinstance(v, int)}
     nar = sh.get_next_available_row()
-    formatted_msg = (
-        lambda desc, cost: f"""A{nar} | B{nar} | C{nar}\n{desc} | ${cost}.00 | {date}"""
+    formatted_msg = lambda desc, cost: (
+        f"<b>Desc:</b> {desc}\n"
+        f"<b>Amt:</b> ${cost}.00\n"
+        f"<b>Date:</b> {date}\n"
+        f"<b>Row:</b> {nar}"
     )
 
     if info_split[0] == ".":
         desc, cost, _ = sh.wks.get(f"A{nar-1}:C{nar-1}")[0]
         cost = cost.replace("$", "")
-        update.sendMessage(formatted_msg(desc, cost))
+        update.sendMessage(formatted_msg(desc, cost), parse_mode=HTML)
         update_row(nar, desc, cost, date, sh)
 
     elif lwr_txt in shortcuts:
-        update.sendMessage(formatted_msg(lwr_txt, shortcuts[lwr_txt]))
+        update.sendMessage(formatted_msg(lwr_txt, shortcuts[lwr_txt]), parse_mode=HTML)
         update_row(nar, lwr_txt, f"{shortcuts[lwr_txt]}", date, sh)
 
     elif len(info_split) < 2:
-        update.sendMessage("Sintaxis incorrecta")
+        update.sendMessage("Sintaxis incorrecta", parse_mode=HTML)
 
     elif numero_primero or numero_final:
         cost = info_split[0] if numero_primero else info_split[-1]
-        description = (
-            " ".join(info_split[1:]) if numero_primero else " ".join(info_split[0:-1])
-        )
+        description = " ".join(info_split[1:]) if numero_primero else " ".join(info_split[0:-1])
         if len(info_split) == 2 and description.lower() in short_desc:
             description = short_desc[description.lower()]
-        update.sendMessage(formatted_msg(description, cost))
+        update.sendMessage(formatted_msg(description, cost), parse_mode=HTML)
         update_row(nar, description, cost, date, sh)
     else:
-        update.sendMessage("Se necesita un valor numerico")
+        update.sendMessage("Se necesita un valor numerico", parse_mode=HTML)

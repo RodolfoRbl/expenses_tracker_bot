@@ -5,7 +5,7 @@ from base.update import Update
 from base.bot import Bot
 from base.google_spreadsheets import Spreadsheet
 
-from config import TOKEN_BOT, HTML, MY_CHAT_ID, TOKEN_GOOGLE
+from config import TOKEN_BOT, HTML, MY_CHAT_ID, TOKEN_GOOGLE, FILE_NAME, SHEET_NAME
 import handlers as h
 
 
@@ -15,7 +15,7 @@ sh: Spreadsheet = None
 
 def conectar():
     global sh
-    sh = Spreadsheet("Rodolfo Robles", "GASTOS", TOKEN_GOOGLE)
+    sh = Spreadsheet(FILE_NAME, SHEET_NAME, TOKEN_GOOGLE)
 
 
 t_conectar = threading.Thread(target=conectar)
@@ -28,39 +28,41 @@ def lambda_handler(event, context):
 
     try:
         if update.user_id == MY_CHAT_ID:
-            t_inicio = threading.Thread(
-                target=update.sendMessage, args=("Iniciando...",)
-            )
+            t_inicio = threading.Thread(target=update.sendMessage, args=("Starting...",))
             t_inicio.start()
 
             t_conectar.join()
 
-            if update.text and not update.command:
+            if update.callback_query:
+                h.handle_callback_query(update, sh)
+
+            elif update.text and not update.command:
                 update.messageHandler("default", h.cmd_text_general, sh=sh)
 
             elif update.command:
                 handlers = {
+                    "menu": h.cmd_show_menu,
                     "last_records": h.cmd_last_records,
                     "delete_last_record": h.cmd_delete_last_record,
                     "update_json": h.cmd_update_json,
                     "get_debt": h.cmd_get_debt,
                     "debt": h.cmd_add_debt_record,
                     "find": h.cmd_find_pattern,
-                    'delete_debt': h.cmd_delete_debt_record
+                    "delete_debt": h.cmd_delete_debt_record,
                 }
 
                 for k, v in handlers.items():
                     if update.commandHandler(k, v, sh=sh):
                         break
 
-            # Formatos no soportados
+            # Unsupported formats
             else:
-                texto = f"<strong>Actividad extraña:</strong> \n\n {json.dumps(event,indent=4)}"
+                texto = f"<strong>Strange activity:</strong> \n\n {json.dumps(event,indent=4)}"
                 update.sendMessage(texto, parse_mode=HTML)
 
-        # Usuarios diferentes
+        # Different users
         else:
-            unknown_user = f"<strong>Usuario desconocido:</strong> \n\n {json.dumps(event,indent=4)}"
+            unknown_user = f"<strong>Unknown user:</strong> \n\n {json.dumps(event,indent=4)}"
             bot.post(
                 "sendMessage",
                 params={
@@ -70,11 +72,12 @@ def lambda_handler(event, context):
                 },
             )
 
-    # Errores de código
+    # Code errors
     except Exception as e:
+        event_string = json.dumps(event, indent=4)
         bot.sendMessage(
             update,
-            f"<strong>ERROR:</strong> \n\n{e}\n\n {json.dumps(event,indent=4)}",
+            f"<strong>ERROR:</strong> \n\n{e}\n\n{event_string}",
             parse_mode=HTML,
         )
 
