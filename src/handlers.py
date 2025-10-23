@@ -116,7 +116,8 @@ def cmd_find_pattern(update: Update, sh: Spreadsheet):
 def cmd_delete_last_record(update: Update, sh: Spreadsheet) -> str:
     last_data = sh.get_next_available_row() - 1
     datos = sh.wks.get(f"A{last_data}:C{last_data}")
-    mensaje = f"The row {last_data} has been cleared\n{'-'*60}\n{sh.clean_record_output(datos)}"
+    msg = f"The row {last_data} has been cleared"
+    mensaje = f"{msg}\n{'-'*len(msg)}\n{sh.clean_record_output(datos)}"
     update.sendMessage(mensaje)
     sh.wks.delete_rows(last_data)
 
