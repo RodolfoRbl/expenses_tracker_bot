@@ -44,7 +44,8 @@ def cmd_delete_debt_record(update: Update, sh: Spreadsheet):
         last_data = sh.get_next_empty_row(start_row=2, max_row=14) - 1
         range_str = f"A{last_data}:C{last_data}"
         datos = sh.wks.get(range_str)
-        mensaje = f"The row {last_data} has been cleared\n{'-'*60}\n{sh.clean_record_output(datos)}"
+        msg = f"The row {last_data} has been cleared"
+        mensaje = f"{msg}\n{'-'*len(msg)}\n{sh.clean_record_output(datos)}"
         update.sendMessage(mensaje)
         sh.clear_range(range_str)
     except Exception as e:
