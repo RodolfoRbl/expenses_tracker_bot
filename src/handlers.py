@@ -199,9 +199,11 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
     numero_primero = re.findall("^\d+(\.\d+)?$", info_split[0])
     numero_final = re.findall("^\d+(\.\d+)?$", info_split[-1])
     lwr_txt = update.text.lower()
-    all_shortcuts = json.loads(os.getenv("EXPENSES_SHORTCUTS", "{}"))
-    short_desc = {k: v for k, v in all_shortcuts.items() if isinstance(v, str)}
-    shortcuts = {k: v for k, v in all_shortcuts.items() if isinstance(v, int)}
+
+    # Load shortcuts and default values
+    short_desc = json.loads(os.getenv("EXPENSES_SHORTCUTS", "{}"))
+    default_values = json.loads(os.getenv("EXPENSES_DEFAULT_VALUES", "{}"))
+
     nar = sh.get_next_available_row()
     formatted_msg = lambda desc, cost: (
         f"<b>Desc:</b> {desc}\n"
@@ -216,12 +218,19 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
         update.sendMessage(formatted_msg(desc, cost), parse_mode=HTML)
         update_row(nar, desc, cost, date, sh)
 
-    elif lwr_txt in shortcuts:
-        cost = shortcuts[lwr_txt]
-        # See if the text also matches a description shortcut (not just an amount)
-        description = short_desc.get(lwr_txt, lwr_txt)
-        update.sendMessage(formatted_msg(description, cost), parse_mode=HTML)
-        update_row(nar, description, f"{cost}", date, sh)
+    # Case when both shortcut and default value exist
+    elif lwr_txt in default_values and lwr_txt in short_desc:
+        desc = short_desc[lwr_txt]
+        cost = default_values[lwr_txt]
+        update.sendMessage(formatted_msg(desc, cost), parse_mode=HTML)
+        update_row(nar, desc, f"{cost}", date, sh)
+
+    # Case when only default value exists
+    elif lwr_txt in default_values:
+        desc = update.text
+        cost = default_values[lwr_txt]
+        update.sendMessage(formatted_msg(desc, cost), parse_mode=HTML)
+        update_row(nar, desc, f"{cost}", date, sh)
 
     elif len(info_split) < 2:
         update.sendMessage("Sintaxis incorrecta", parse_mode=HTML)
@@ -229,6 +238,7 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
     elif numero_primero or numero_final:
         cost = info_split[0] if numero_primero else info_split[-1]
         description = " ".join(info_split[1:]) if numero_primero else " ".join(info_split[0:-1])
+        # Case when only shortcut exists
         if len(info_split) == 2 and description.lower() in short_desc:
             description = short_desc[description.lower()]
         update.sendMessage(formatted_msg(description, cost), parse_mode=HTML)
