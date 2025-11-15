@@ -49,7 +49,7 @@ jobs:
           LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name ${{ env.LAYER_NAME }} \
           --zip-file fileb://layers/gspread_layer.zip \
-          --compatible-runtimes python3.12 \
+          --compatible-runtimes python3.9 python3.12 \
           --query 'Version' \
           --output text)
 
@@ -88,3 +88,9 @@ jobs:
           aws lambda update-function-code \
             --function-name ${{ env.FUNCTION_NAME }} \
             --zip-file fileb://deployment.zip
+
+      - name: Update Lambda runtime to Python 3.12
+        run: |
+          aws lambda update-function-configuration \
+            --function-name ${{ env.FUNCTION_NAME }} \
+            --runtime python3.12
