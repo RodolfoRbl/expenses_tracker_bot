@@ -217,8 +217,11 @@ def cmd_text_general(update: Update, sh: Spreadsheet) -> str:
         update_row(nar, desc, cost, date, sh)
 
     elif lwr_txt in shortcuts:
-        update.sendMessage(formatted_msg(lwr_txt, shortcuts[lwr_txt]), parse_mode=HTML)
-        update_row(nar, lwr_txt, f"{shortcuts[lwr_txt]}", date, sh)
+        cost = shortcuts[lwr_txt]
+        # See if the text also matches a description shortcut (not just an amount)
+        description = short_desc.get(lwr_txt, lwr_txt)
+        update.sendMessage(formatted_msg(description, cost), parse_mode=HTML)
+        update_row(nar, description, f"{cost}", date, sh)
 
     elif len(info_split) < 2:
         update.sendMessage("Sintaxis incorrecta", parse_mode=HTML)
