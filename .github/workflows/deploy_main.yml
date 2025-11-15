@@ -49,7 +49,7 @@ jobs:
           LAYER_VERSION=$(aws lambda publish-layer-version \
           --layer-name ${{ env.LAYER_NAME }} \
           --zip-file fileb://layers/gspread_layer.zip \
-          --compatible-runtimes python3.9 \
+          --compatible-runtimes python3.12 \
           --query 'Version' \
           --output text)
 
