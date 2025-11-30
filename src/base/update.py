@@ -58,6 +58,7 @@ class Update(Bot):
         elif "pre_checkout_query" in self.update_dict:
             self.pre_checkout_query_classifier()
         else:
+            print(f"None of the classifiers matched. Update dict: {self.update_dict}")
             raise ValueError("Invalid update object. Check classifiers")
 
     def message_classifier(self):
