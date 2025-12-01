@@ -51,12 +51,16 @@ class Update(Bot):
 
         if "message" in self.update_dict:
             self.message_classifier()
+            print(f"Message classified: {self.update_dict.get('message')}")
         elif "callback_query" in self.update_dict:
             self.callback_query_classifier()
+            print(f"Message classified: {self.update_dict.get('callback_query')}")
         elif "edited_message" in self.update_dict:
             self.edited_message_classifier()
+            print(f"Message classified: {self.update_dict.get('edited_message')}")
         elif "pre_checkout_query" in self.update_dict:
             self.pre_checkout_query_classifier()
+            print(f"Message classified: {self.update_dict.get('pre_checkout_query')}")
         else:
             print(f"None of the classifiers matched. Update dict: {self.update_dict}")
             raise ValueError("Invalid update object. Check classifiers")
